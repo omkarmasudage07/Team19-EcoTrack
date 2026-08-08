@@ -1,0 +1,251 @@
+/* ==========================================================
+   EcoTrack Design Tokens
+   Palette: Emerald green primary, slate gray dark, clean white.
+   Inspired by Stripe / Linear / Notion - minimal, whitespace-led,
+   no student-project rainbow colors.
+   ========================================================== */
+
+:root {
+  /* Brand */
+  --color-primary: #0f9d58;
+  --color-primary-dark: #0b7a44;
+  --color-primary-light: #e6f6ee;
+  --color-secondary: #ffffff;
+  --color-dark: #1e293b;       /* slate-800 */
+  --color-dark-2: #334155;     /* slate-700 */
+  --color-muted: #64748b;      /* slate-500 */
+  --color-border: #e2e8f0;     /* slate-200 */
+  --color-bg: #f8fafc;         /* slate-50 */
+
+  /* Status */
+  --color-success: #16a34a;
+  --color-warning: #d97706;
+  --color-danger: #dc2626;
+  --color-info: #2563eb;
+
+  /* Type */
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+
+  /* Radius / shadow */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.06);
+  --shadow-md: 0 4px 16px rgba(15, 23, 42, 0.08);
+  --shadow-lg: 0 12px 32px rgba(15, 23, 42, 0.12);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--color-bg);
+  color: var(--color-dark);
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--color-dark);
+}
+
+a {
+  color: var(--color-primary);
+  text-decoration: none;
+}
+a:hover {
+  color: var(--color-primary-dark);
+}
+
+/* Bootstrap overrides - keep it subtle, not a re-theme */
+.btn-success,
+.btn-primary {
+  background-color: var(--color-primary);
+  border-color: var(--color-primary);
+}
+.btn-success:hover,
+.btn-primary:hover,
+.btn-success:focus,
+.btn-primary:focus {
+  background-color: var(--color-primary-dark);
+  border-color: var(--color-primary-dark);
+}
+.btn-outline-success {
+  color: var(--color-primary);
+  border-color: var(--color-primary);
+}
+.btn-outline-success:hover {
+  background-color: var(--color-primary);
+  border-color: var(--color-primary);
+}
+.text-success {
+  color: var(--color-primary) !important;
+}
+.bg-success {
+  background-color: var(--color-primary) !important;
+}
+.form-control:focus,
+.form-select:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-light);
+}
+
+/* Card - flatter, Stripe-like */
+.card {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+}
+
+.et-card-hover {
+  transition: box-shadow 0.15s ease, transform 0.15s ease;
+}
+.et-card-hover:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
+}
+
+/* Status badges */
+.et-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+.et-badge-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.et-badge-green { background: #e6f6ee; color: #0b7a44; }
+.et-badge-green .et-badge-dot { background: #0f9d58; }
+
+.et-badge-orange { background: #fef3e2; color: #b45309; }
+.et-badge-orange .et-badge-dot { background: #d97706; }
+
+.et-badge-red { background: #fee2e2; color: #b91c1c; }
+.et-badge-red .et-badge-dot { background: #dc2626; }
+
+.et-badge-blue { background: #dbeafe; color: #1d4ed8; }
+.et-badge-blue .et-badge-dot { background: #2563eb; }
+
+.et-badge-slate { background: #f1f5f9; color: #475569; }
+.et-badge-slate .et-badge-dot { background: #64748b; }
+
+/* Layout shell */
+.et-shell {
+  min-height: 100vh;
+  display: flex;
+}
+
+.et-sidebar {
+  width: 248px;
+  flex-shrink: 0;
+  background: var(--color-secondary);
+  border-right: 1px solid var(--color-border);
+  transition: width 0.2s ease;
+}
+.et-sidebar.collapsed {
+  width: 76px;
+}
+
+.et-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.et-navbar {
+  height: 64px;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-secondary);
+  display: flex;
+  align-items: center;
+  padding: 0 1.5rem;
+  gap: 1rem;
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+
+.et-content {
+  flex: 1;
+  padding: 1.75rem;
+}
+
+.et-nav-link {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem 0.9rem;
+  border-radius: var(--radius-sm);
+  color: var(--color-dark-2);
+  font-weight: 500;
+  font-size: 0.9rem;
+  margin: 0.1rem 0.6rem;
+}
+.et-nav-link:hover {
+  background: var(--color-bg);
+  color: var(--color-dark);
+}
+.et-nav-link.active {
+  background: var(--color-primary-light);
+  color: var(--color-primary-dark);
+  font-weight: 600;
+}
+
+/* Empty / loading states */
+.et-empty {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: var(--color-muted);
+}
+
+.et-skeleton {
+  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 37%, #f1f5f9 63%);
+  background-size: 400% 100%;
+  animation: et-skeleton-loading 1.4s ease infinite;
+  border-radius: var(--radius-sm);
+}
+@keyframes et-skeleton-loading {
+  0% { background-position: 100% 50%; }
+  100% { background-position: 0 50%; }
+}
+
+@media (max-width: 900px) {
+  .et-sidebar {
+    position: fixed;
+    left: -260px;
+    top: 0;
+    bottom: 0;
+    z-index: 40;
+    box-shadow: var(--shadow-lg);
+  }
+  .et-sidebar.mobile-open {
+    left: 0;
+  }
+}
+
+/* Simple spin animation for inline loading icons (e.g. map geocoding lookup) */
+.spin {
+  animation: et-spin 1s linear infinite;
+}
+@keyframes et-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
