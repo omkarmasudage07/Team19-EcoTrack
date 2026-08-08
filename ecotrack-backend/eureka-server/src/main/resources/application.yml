@@ -1,0 +1,28 @@
+server:
+  port: 8761
+
+spring:
+  application:
+    name: eureka-server
+
+eureka:
+  instance:
+    hostname: localhost
+  client:
+    # The Eureka Server itself does not need to register with or fetch
+    # registry information from another Eureka Server.
+    register-with-eureka: false
+    fetch-registry: false
+    service-url:
+      defaultZone: http://${eureka.instance.hostname}:${server.port}/eureka/
+  server:
+    # In local development we want a service to disappear quickly from the
+    # dashboard once it is stopped, instead of waiting for the default
+    # 90 second eviction window.
+    eviction-interval-timer-in-ms: 5000
+    enable-self-preservation: false
+
+logging:
+  level:
+    com.netflix.eureka: WARN
+    com.netflix.discovery: WARN

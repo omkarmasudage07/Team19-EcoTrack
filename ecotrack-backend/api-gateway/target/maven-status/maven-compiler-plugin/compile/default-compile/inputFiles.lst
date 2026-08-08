@@ -1,0 +1,4 @@
+D:\LastProject\ecotrack-backend\api-gateway\src\main\java\com\ecotrack\gateway\ApiGatewayApplication.java
+D:\LastProject\ecotrack-backend\api-gateway\src\main\java\com\ecotrack\gateway\config\CorsConfig.java
+D:\LastProject\ecotrack-backend\api-gateway\src\main\java\com\ecotrack\gateway\filter\JwtAuthenticationFilter.java
+D:\LastProject\ecotrack-backend\api-gateway\src\main\java\com\ecotrack\gateway\security\JwtUtil.java

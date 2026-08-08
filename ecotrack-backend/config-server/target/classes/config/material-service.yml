@@ -1,0 +1,59 @@
+server:
+  port: 8084
+
+spring:
+  datasource:
+    url: jdbc:mysql://localhost:3306/material_db?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+    username: root
+    password: cdac
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.MySQLDialect
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: guest
+    password: guest
+    listener:
+      simple:
+        auto-startup: true
+        missing-queues-fatal: false
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  health:
+    rabbit:
+      enabled: false
+
+ecotrack:
+  jwt:
+    secret: ZWNvdHJhY2stc3VwZXItc2VjcmV0LWtleS1mb3Itand0LXNpZ25pbmctbXVzdC1iZS1sb25n
+
+# Razorpay TEST MODE credentials. Sign up free at https://dashboard.razorpay.com,
+# switch to "Test Mode" (top-left toggle), then go to Settings > API Keys
+# to generate a Test Key. Paste them here - never commit real keys to
+# source control in a real project; for this student project, replacing
+# these two placeholder values is enough to make the Razorpay checkout
+# work end to end.
+razorpay:
+  key-id: rzp_test_YOUR_KEY_ID
+  key-secret: YOUR_TEST_KEY_SECRET
+
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+
+logging:
+  level:
+    com.ecotrack.material: INFO
