@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>WasteCategoryController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">pickup-service</a> &gt; <a href="index.source.html" class="el_package">com.ecotrack.pickup.controller</a> &gt; <span class="el_source">WasteCategoryController.java</span></div><h1>WasteCategoryController.java</h1><pre class="source lang-java linenums">package com.ecotrack.pickup.controller;
+
+import com.ecotrack.pickup.dto.request.WasteCategoryRequest;
+import com.ecotrack.pickup.dto.response.ApiResponse;
+import com.ecotrack.pickup.dto.response.WasteCategoryResponse;
+import com.ecotrack.pickup.service.WasteCategoryService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+@RestController
+@RequestMapping(&quot;/api/v1/waste-categories&quot;)
+@RequiredArgsConstructor
+@Tag(name = &quot;Waste Categories&quot;, description = &quot;E-waste categories a Citizen chooses from when scheduling a pickup&quot;)
+public class WasteCategoryController {
+
+    private final WasteCategoryService wasteCategoryService;
+
+    @Operation(summary = &quot;List active waste categories - visible to everyone&quot;)
+    @GetMapping
+    public ResponseEntity&lt;ApiResponse&lt;List&lt;WasteCategoryResponse&gt;&gt;&gt; getActive() {
+<span class="nc" id="L29">        List&lt;WasteCategoryResponse&gt; response = wasteCategoryService.getAllActive();</span>
+<span class="nc" id="L30">        return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK.value(), &quot;Waste categories fetched&quot;, response));</span>
+    }
+
+    @Operation(summary = &quot;[Admin] List every waste category, including inactive ones&quot;)
+    @PreAuthorize(&quot;hasRole('ADMIN')&quot;)
+    @GetMapping(&quot;/all&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;List&lt;WasteCategoryResponse&gt;&gt;&gt; getAll() {
+<span class="nc" id="L37">        List&lt;WasteCategoryResponse&gt; response = wasteCategoryService.getAll();</span>
+<span class="nc" id="L38">        return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK.value(), &quot;Waste categories fetched&quot;, response));</span>
+    }
+
+    @Operation(summary = &quot;[Admin] Create a new waste category&quot;)
+    @PreAuthorize(&quot;hasRole('ADMIN')&quot;)
+    @PostMapping
+    public ResponseEntity&lt;ApiResponse&lt;WasteCategoryResponse&gt;&gt; create(@Valid @RequestBody WasteCategoryRequest request) {
+<span class="nc" id="L45">        WasteCategoryResponse response = wasteCategoryService.create(request);</span>
+<span class="nc" id="L46">        return ResponseEntity.status(HttpStatus.CREATED)</span>
+<span class="nc" id="L47">                .body(ApiResponse.success(HttpStatus.CREATED.value(), &quot;Waste category created&quot;, response));</span>
+    }
+
+    @Operation(summary = &quot;[Admin] Activate or deactivate a waste category&quot;)
+    @PreAuthorize(&quot;hasRole('ADMIN')&quot;)
+    @PatchMapping(&quot;/{id}/active&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;WasteCategoryResponse&gt;&gt; setActive(
+            @PathVariable Long id, @RequestParam boolean active) {
+<span class="nc" id="L55">        WasteCategoryResponse response = wasteCategoryService.setActive(id, active);</span>
+<span class="nc" id="L56">        return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK.value(), &quot;Waste category updated&quot;, response));</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

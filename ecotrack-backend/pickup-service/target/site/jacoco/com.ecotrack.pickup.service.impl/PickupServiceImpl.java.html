@@ -1,0 +1,281 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>PickupServiceImpl.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">pickup-service</a> &gt; <a href="index.source.html" class="el_package">com.ecotrack.pickup.service.impl</a> &gt; <span class="el_source">PickupServiceImpl.java</span></div><h1>PickupServiceImpl.java</h1><pre class="source lang-java linenums">package com.ecotrack.pickup.service.impl;
+
+import com.ecotrack.pickup.client.UserServiceClient;
+import com.ecotrack.pickup.dto.request.SchedulePickupRequest;
+import com.ecotrack.pickup.dto.request.UpdatePickupStatusRequest;
+import com.ecotrack.pickup.dto.response.PickupResponse;
+import com.ecotrack.pickup.entity.Pickup;
+import com.ecotrack.pickup.entity.PickupImage;
+import com.ecotrack.pickup.entity.PickupStatusHistory;
+import com.ecotrack.pickup.entity.WasteCategory;
+import com.ecotrack.pickup.enums.PickupStatus;
+import com.ecotrack.pickup.exception.BusinessException;
+import com.ecotrack.pickup.exception.ResourceNotFoundException;
+import com.ecotrack.pickup.mapper.PickupMapper;
+import com.ecotrack.pickup.producer.PickupEventProducer;
+import com.ecotrack.pickup.repository.PickupImageRepository;
+import com.ecotrack.pickup.repository.PickupRepository;
+import com.ecotrack.pickup.repository.PickupStatusHistoryRepository;
+import com.ecotrack.pickup.repository.WasteCategoryRepository;
+import com.ecotrack.pickup.service.PickupService;
+import com.ecotrack.pickup.util.PickupNumberGenerator;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+import java.util.Map;
+
+@Service
+@RequiredArgsConstructor
+<span class="nc" id="L35">@Slf4j</span>
+public class PickupServiceImpl implements PickupService {
+
+    private final PickupRepository pickupRepository;
+    private final PickupImageRepository pickupImageRepository;
+    private final PickupStatusHistoryRepository statusHistoryRepository;
+    private final WasteCategoryRepository wasteCategoryRepository;
+    private final UserServiceClient userServiceClient;
+    private final PickupEventProducer pickupEventProducer;
+
+    /** Exactly which status is allowed to follow which - enforced on every transition. */
+<span class="nc" id="L46">    private static final Map&lt;PickupStatus, PickupStatus&gt; NEXT_STATUS = Map.of(</span>
+<span class="nc" id="L47">            PickupStatus.ACCEPTED, PickupStatus.ON_THE_WAY,</span>
+<span class="nc" id="L48">            PickupStatus.ON_THE_WAY, PickupStatus.COLLECTED,</span>
+<span class="nc" id="L49">            PickupStatus.COLLECTED, PickupStatus.PROCESSING,</span>
+<span class="nc" id="L50">            PickupStatus.PROCESSING, PickupStatus.COMPLETED</span>
+<span class="nc" id="L51">    );</span>
+
+    // ------------------------------------------------------------------
+    // Citizen
+    // ------------------------------------------------------------------
+
+    @Override
+    @Transactional
+    public PickupResponse schedulePickup(Long citizenId, SchedulePickupRequest request) {
+<span class="nc" id="L60">        WasteCategory category = wasteCategoryRepository.findById(request.getWasteCategoryId())</span>
+<span class="nc" id="L61">                .orElseThrow(() -&gt; new ResourceNotFoundException(&quot;Waste category not found&quot;));</span>
+
+<span class="nc bnc" id="L63" title="All 2 branches missed.">        if (!category.isActive()) {</span>
+<span class="nc" id="L64">            throw new BusinessException(&quot;This waste category is no longer available&quot;, HttpStatus.BAD_REQUEST);</span>
+        }
+
+<span class="nc" id="L67">        Pickup pickup = Pickup.builder()</span>
+<span class="nc" id="L68">                .pickupNumber(PickupNumberGenerator.generate())</span>
+<span class="nc" id="L69">                .citizenId(citizenId)</span>
+<span class="nc" id="L70">                .pickupAddress(request.getPickupAddress())</span>
+<span class="nc" id="L71">                .pickupCity(request.getPickupCity())</span>
+<span class="nc" id="L72">                .pickupPincode(request.getPickupPincode())</span>
+<span class="nc bnc" id="L73" title="All 4 branches missed.">                .regionName(request.getRegionName() != null &amp;&amp; !request.getRegionName().isBlank() ? request.getRegionName() : &quot;Pune Region&quot;)</span>
+<span class="nc" id="L74">                .latitude(request.getLatitude())</span>
+<span class="nc" id="L75">                .longitude(request.getLongitude())</span>
+<span class="nc" id="L76">                .pickupDate(request.getPickupDate())</span>
+<span class="nc" id="L77">                .pickupTimeSlot(request.getPickupTimeSlot())</span>
+<span class="nc" id="L78">                .wasteCategory(category)</span>
+<span class="nc" id="L79">                .notes(request.getNotes())</span>
+<span class="nc" id="L80">                .status(PickupStatus.PENDING)</span>
+<span class="nc" id="L81">                .build();</span>
+
+<span class="nc" id="L83">        pickup = pickupRepository.save(pickup);</span>
+<span class="nc" id="L84">        recordHistory(pickup, null, PickupStatus.PENDING, citizenId);</span>
+
+<span class="nc bnc" id="L86" title="All 2 branches missed.">        if (request.getImageUrls() != null) {</span>
+<span class="nc bnc" id="L87" title="All 2 branches missed.">            for (String url : request.getImageUrls()) {</span>
+<span class="nc" id="L88">                pickupImageRepository.save(PickupImage.builder()</span>
+<span class="nc" id="L89">                        .pickup(pickup)</span>
+<span class="nc" id="L90">                        .imageUrl(url)</span>
+<span class="nc" id="L91">                        .imageType(&quot;WASTE_PHOTO&quot;)</span>
+<span class="nc" id="L92">                        .build());</span>
+            }
+        }
+
+<span class="nc" id="L96">        log.info(&quot;Pickup {} scheduled by citizen {} in region {}&quot;, pickup.getPickupNumber(), citizenId, pickup.getRegionName());</span>
+<span class="nc" id="L97">        return getPickupDetail(pickup.getId());</span>
+    }
+
+    @Override
+    public PickupResponse getPickupDetail(Long pickupId) {
+<span class="nc" id="L102">        Pickup pickup = findPickupOrThrow(pickupId);</span>
+<span class="nc" id="L103">        List&lt;PickupImage&gt; images = pickupImageRepository.findByPickupId(pickupId);</span>
+<span class="nc" id="L104">        List&lt;PickupStatusHistory&gt; history = statusHistoryRepository.findByPickupIdOrderByUpdatedAtAsc(pickupId);</span>
+<span class="nc" id="L105">        return PickupMapper.toDetailResponse(pickup, images, history);</span>
+    }
+
+    @Override
+    public Page&lt;PickupResponse&gt; getCitizenPickups(Long citizenId, PickupStatus status, Pageable pageable) {
+<span class="nc bnc" id="L110" title="All 2 branches missed.">        Page&lt;Pickup&gt; pickups = (status != null)</span>
+<span class="nc" id="L111">                ? pickupRepository.findByCitizenIdAndStatus(citizenId, status, pageable)</span>
+<span class="nc" id="L112">                : pickupRepository.findByCitizenId(citizenId, pageable);</span>
+<span class="nc" id="L113">        return pickups.map(PickupMapper::toSummaryResponse);</span>
+    }
+
+    @Override
+    @Transactional
+    public PickupResponse cancelPickup(Long pickupId, Long citizenId) {
+<span class="nc" id="L119">        Pickup pickup = findPickupOrThrow(pickupId);</span>
+
+<span class="nc bnc" id="L121" title="All 2 branches missed.">        if (!pickup.getCitizenId().equals(citizenId)) {</span>
+<span class="nc" id="L122">            throw new BusinessException(&quot;You can only cancel your own pickups&quot;, HttpStatus.FORBIDDEN);</span>
+        }
+<span class="nc bnc" id="L124" title="All 2 branches missed.">        if (pickup.getStatus() != PickupStatus.PENDING) {</span>
+<span class="nc" id="L125">            throw new BusinessException(</span>
+<span class="nc" id="L126">                    &quot;This pickup can no longer be cancelled - a Recycler has already accepted it&quot;, HttpStatus.CONFLICT);</span>
+        }
+
+<span class="nc" id="L129">        PickupStatus oldStatus = pickup.getStatus();</span>
+<span class="nc" id="L130">        pickup.setStatus(PickupStatus.CANCELLED);</span>
+<span class="nc" id="L131">        pickup = pickupRepository.save(pickup);</span>
+<span class="nc" id="L132">        recordHistory(pickup, oldStatus, PickupStatus.CANCELLED, citizenId);</span>
+<span class="nc" id="L133">        pickupEventProducer.publishPickupCancelled(pickup);</span>
+
+<span class="nc" id="L135">        return getPickupDetail(pickup.getId());</span>
+    }
+
+    // ------------------------------------------------------------------
+    // Recycler
+    // ------------------------------------------------------------------
+
+    @Override
+    public Page&lt;PickupResponse&gt; getAvailablePickups(String regionName, Double recyclerLat, Double recyclerLng, Pageable pageable) {
+<span class="nc bnc" id="L144" title="All 4 branches missed.">        Page&lt;Pickup&gt; pickups = (regionName != null &amp;&amp; !regionName.isBlank())</span>
+<span class="nc" id="L145">                ? pickupRepository.findByStatusAndRecyclerIdIsNullAndRegionNameIgnoreCase(PickupStatus.PENDING, regionName.trim(), pageable)</span>
+<span class="nc" id="L146">                : pickupRepository.findByStatusAndRecyclerIdIsNull(PickupStatus.PENDING, pageable);</span>
+
+<span class="nc" id="L148">        return pickups.map(pickup -&gt; {</span>
+<span class="nc" id="L149">            PickupResponse res = PickupMapper.toSummaryResponse(pickup);</span>
+<span class="nc bnc" id="L150" title="All 8 branches missed.">            if (recyclerLat != null &amp;&amp; recyclerLng != null &amp;&amp; pickup.getLatitude() != null &amp;&amp; pickup.getLongitude() != null) {</span>
+<span class="nc" id="L151">                double dist = calculateDistanceKm(recyclerLat, recyclerLng, pickup.getLatitude(), pickup.getLongitude());</span>
+<span class="nc" id="L152">                res.setDistanceKm(Math.round(dist * 100.0) / 100.0);</span>
+            }
+<span class="nc" id="L154">            return res;</span>
+        });
+    }
+
+    private double calculateDistanceKm(double lat1, double lon1, double lat2, double lon2) {
+<span class="nc" id="L159">        final int R = 6371;</span>
+<span class="nc" id="L160">        double latDistance = Math.toRadians(lat2 - lat1);</span>
+<span class="nc" id="L161">        double lonDistance = Math.toRadians(lon2 - lon1);</span>
+<span class="nc" id="L162">        double a = Math.sin(latDistance / 2) * Math.sin(latDistance / 2)</span>
+<span class="nc" id="L163">                + Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2))</span>
+<span class="nc" id="L164">                * Math.sin(lonDistance / 2) * Math.sin(lonDistance / 2);</span>
+<span class="nc" id="L165">        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));</span>
+<span class="nc" id="L166">        return R * c;</span>
+    }
+
+    @Override
+    public Page&lt;PickupResponse&gt; getRecyclerPickups(Long recyclerId, PickupStatus status, Pageable pageable) {
+<span class="nc bnc" id="L171" title="All 2 branches missed.">        Page&lt;Pickup&gt; pickups = (status != null)</span>
+<span class="nc" id="L172">                ? pickupRepository.findByRecyclerIdAndStatus(recyclerId, status, pageable)</span>
+<span class="nc" id="L173">                : pickupRepository.findByRecyclerId(recyclerId, pageable);</span>
+<span class="nc" id="L174">        return pickups.map(PickupMapper::toSummaryResponse);</span>
+    }
+
+    @Override
+    @Transactional
+    public PickupResponse acceptPickup(Long pickupId, Long recyclerId) {
+<span class="nc" id="L180">        Pickup pickup = findPickupOrThrow(pickupId);</span>
+
+<span class="nc bnc" id="L182" title="All 4 branches missed.">        if (pickup.getStatus() != PickupStatus.PENDING || pickup.getRecyclerId() != null) {</span>
+<span class="nc" id="L183">            throw new BusinessException(&quot;This pickup has already been accepted by another Recycler&quot;, HttpStatus.CONFLICT);</span>
+        }
+
+<span class="nc" id="L186">        pickup.setRecyclerId(recyclerId);</span>
+<span class="nc" id="L187">        pickup.setStatus(PickupStatus.ACCEPTED);</span>
+<span class="nc" id="L188">        pickup = pickupRepository.save(pickup);</span>
+<span class="nc" id="L189">        recordHistory(pickup, PickupStatus.PENDING, PickupStatus.ACCEPTED, recyclerId);</span>
+<span class="nc" id="L190">        pickupEventProducer.publishPickupAccepted(pickup);</span>
+
+<span class="nc" id="L192">        log.info(&quot;Pickup {} accepted by recycler {}&quot;, pickup.getPickupNumber(), recyclerId);</span>
+<span class="nc" id="L193">        return getPickupDetail(pickup.getId());</span>
+    }
+
+    @Override
+    public PickupResponse rejectPickup(Long pickupId, Long recyclerId) {
+        // A &quot;reject&quot; by one Recycler does not change the Pickup's state -
+        // it simply remains PENDING and visible to every other Recycler.
+        // There is nothing to persist here; this endpoint exists purely
+        // so the frontend can remove the card from that Recycler's own
+        // &quot;available pickups&quot; list.
+<span class="nc" id="L203">        Pickup pickup = findPickupOrThrow(pickupId);</span>
+<span class="nc" id="L204">        log.info(&quot;Pickup {} declined by recycler {} - remains available for others&quot;, pickup.getPickupNumber(), recyclerId);</span>
+<span class="nc" id="L205">        return getPickupDetail(pickupId);</span>
+    }
+
+    @Override
+    @Transactional
+    public PickupResponse updateStatus(Long pickupId, Long recyclerId, UpdatePickupStatusRequest request) {
+<span class="nc" id="L211">        Pickup pickup = findPickupOrThrow(pickupId);</span>
+
+<span class="nc bnc" id="L213" title="All 2 branches missed.">        if (!recyclerId.equals(pickup.getRecyclerId())) {</span>
+<span class="nc" id="L214">            throw new BusinessException(&quot;You are not assigned to this pickup&quot;, HttpStatus.FORBIDDEN);</span>
+        }
+
+<span class="nc" id="L217">        PickupStatus currentStatus = pickup.getStatus();</span>
+<span class="nc" id="L218">        PickupStatus expectedNext = NEXT_STATUS.get(currentStatus);</span>
+
+<span class="nc bnc" id="L220" title="All 4 branches missed.">        if (expectedNext == null || expectedNext != request.getStatus()) {</span>
+<span class="nc" id="L221">            throw new BusinessException(</span>
+<span class="nc" id="L222">                    &quot;Invalid status transition: a pickup that is &quot; + currentStatus +</span>
+<span class="nc bnc" id="L223" title="All 2 branches missed.">                            &quot; can only move to &quot; + (expectedNext != null ? expectedNext : &quot;no further status&quot;),</span>
+<span class="nc" id="L224">                    HttpStatus.BAD_REQUEST);</span>
+        }
+
+<span class="nc" id="L227">        pickup.setStatus(request.getStatus());</span>
+<span class="nc" id="L228">        pickup = pickupRepository.save(pickup);</span>
+<span class="nc" id="L229">        recordHistory(pickup, currentStatus, request.getStatus(), recyclerId);</span>
+
+<span class="nc bnc" id="L231" title="All 4 branches missed.">        if (request.getStatus() == PickupStatus.COLLECTED &amp;&amp; request.getProofImageUrl() != null) {</span>
+<span class="nc" id="L232">            pickupImageRepository.save(PickupImage.builder()</span>
+<span class="nc" id="L233">                    .pickup(pickup)</span>
+<span class="nc" id="L234">                    .imageUrl(request.getProofImageUrl())</span>
+<span class="nc" id="L235">                    .imageType(&quot;COLLECTION_PROOF&quot;)</span>
+<span class="nc" id="L236">                    .build());</span>
+        }
+
+<span class="nc bnc" id="L239" title="All 2 branches missed.">        if (request.getStatus() == PickupStatus.COMPLETED) {</span>
+            // This is the trigger the business workflow describes: once a
+            // pickup is completed, the Citizen earns EcoPoints. Material
+            // Exchange Service will consume this event and credit the
+            // wallet once it exists.
+<span class="nc" id="L244">            pickupEventProducer.publishPickupCompleted(pickup);</span>
+        }
+
+<span class="nc" id="L247">        log.info(&quot;Pickup {} status changed {} -&gt; {}&quot;, pickup.getPickupNumber(), currentStatus, request.getStatus());</span>
+<span class="nc" id="L248">        return getPickupDetail(pickup.getId());</span>
+    }
+
+    // ------------------------------------------------------------------
+    // Admin
+    // ------------------------------------------------------------------
+
+    @Override
+    public Page&lt;PickupResponse&gt; getAllPickups(PickupStatus status, Pageable pageable) {
+<span class="nc bnc" id="L257" title="All 2 branches missed.">        Page&lt;Pickup&gt; pickups = (status != null)</span>
+<span class="nc" id="L258">                ? pickupRepository.findByStatus(status, pageable)</span>
+<span class="nc" id="L259">                : pickupRepository.findAll(pageable);</span>
+<span class="nc" id="L260">        return pickups.map(PickupMapper::toSummaryResponse);</span>
+    }
+
+    // ------------------------------------------------------------------
+    // Helpers
+    // ------------------------------------------------------------------
+
+    private Pickup findPickupOrThrow(Long pickupId) {
+<span class="nc" id="L268">        return pickupRepository.findById(pickupId)</span>
+<span class="nc" id="L269">                .orElseThrow(() -&gt; new ResourceNotFoundException(&quot;Pickup not found with id: &quot; + pickupId));</span>
+    }
+
+    private void recordHistory(Pickup pickup, PickupStatus oldStatus, PickupStatus newStatus, Long updatedBy) {
+<span class="nc" id="L273">        statusHistoryRepository.save(PickupStatusHistory.builder()</span>
+<span class="nc" id="L274">                .pickup(pickup)</span>
+<span class="nc" id="L275">                .oldStatus(oldStatus)</span>
+<span class="nc" id="L276">                .newStatus(newStatus)</span>
+<span class="nc" id="L277">                .updatedBy(updatedBy)</span>
+<span class="nc" id="L278">                .build());</span>
+<span class="nc" id="L279">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

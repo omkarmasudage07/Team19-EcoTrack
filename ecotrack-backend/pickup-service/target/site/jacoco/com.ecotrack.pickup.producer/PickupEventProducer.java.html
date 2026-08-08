@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>PickupEventProducer.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">pickup-service</a> &gt; <a href="index.source.html" class="el_package">com.ecotrack.pickup.producer</a> &gt; <span class="el_source">PickupEventProducer.java</span></div><h1>PickupEventProducer.java</h1><pre class="source lang-java linenums">package com.ecotrack.pickup.producer;
+
+import com.ecotrack.pickup.constant.RabbitMQConstants;
+import com.ecotrack.pickup.entity.Pickup;
+import com.ecotrack.pickup.event.PickupEvent;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.stereotype.Component;
+
+import java.time.LocalDateTime;
+
+@Component
+@RequiredArgsConstructor
+<span class="nc" id="L15">@Slf4j</span>
+public class PickupEventProducer {
+
+    private final RabbitTemplate rabbitTemplate;
+
+    public void publishPickupAccepted(Pickup pickup) {
+<span class="nc" id="L21">        publish(RabbitMQConstants.ROUTING_KEY_PICKUP_ACCEPTED, pickup);</span>
+<span class="nc" id="L22">    }</span>
+
+    public void publishPickupCompleted(Pickup pickup) {
+<span class="nc" id="L25">        publish(RabbitMQConstants.ROUTING_KEY_PICKUP_COMPLETED, pickup);</span>
+<span class="nc" id="L26">    }</span>
+
+    public void publishPickupCancelled(Pickup pickup) {
+<span class="nc" id="L29">        publish(RabbitMQConstants.ROUTING_KEY_PICKUP_CANCELLED, pickup);</span>
+<span class="nc" id="L30">    }</span>
+
+    private void publish(String routingKey, Pickup pickup) {
+<span class="nc" id="L33">        PickupEvent event = PickupEvent.builder()</span>
+<span class="nc" id="L34">                .pickupId(pickup.getId())</span>
+<span class="nc" id="L35">                .pickupNumber(pickup.getPickupNumber())</span>
+<span class="nc" id="L36">                .citizenId(pickup.getCitizenId())</span>
+<span class="nc" id="L37">                .recyclerId(pickup.getRecyclerId())</span>
+<span class="nc" id="L38">                .status(pickup.getStatus())</span>
+<span class="nc bnc" id="L39" title="All 2 branches missed.">                .wasteCategoryName(pickup.getWasteCategory() != null ? pickup.getWasteCategory().getName() : null)</span>
+<span class="nc" id="L40">                .occurredAt(LocalDateTime.now())</span>
+<span class="nc" id="L41">                .build();</span>
+
+        try {
+<span class="nc" id="L44">            rabbitTemplate.convertAndSend(RabbitMQConstants.EXCHANGE_NAME, routingKey, event);</span>
+<span class="nc" id="L45">            log.info(&quot;Published event [{}] for pickup {}&quot;, routingKey, pickup.getPickupNumber());</span>
+<span class="nc" id="L46">        } catch (Exception ex) {</span>
+            // A pickup status change should never fail just because
+            // RabbitMQ happens to be down - we log it and move on rather
+            // than rolling back a valid, already-persisted status change.
+<span class="nc" id="L50">            log.error(&quot;Failed to publish event [{}] for pickup {}: {}&quot;, routingKey, pickup.getPickupNumber(), ex.getMessage());</span>
+        }
+<span class="nc" id="L52">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>
