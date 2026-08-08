@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>CitizenServiceImpl.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">user-service</a> &gt; <a href="index.source.html" class="el_package">com.ecotrack.user.service.impl</a> &gt; <span class="el_source">CitizenServiceImpl.java</span></div><h1>CitizenServiceImpl.java</h1><pre class="source lang-java linenums">package com.ecotrack.user.service.impl;
+
+import com.ecotrack.user.dto.request.CitizenProfileUpdateRequest;
+import com.ecotrack.user.dto.request.CreateCitizenProfileRequest;
+import com.ecotrack.user.dto.response.CitizenResponse;
+import com.ecotrack.user.entity.Citizen;
+import com.ecotrack.user.exception.BusinessException;
+import com.ecotrack.user.exception.ResourceNotFoundException;
+import com.ecotrack.user.mapper.UserMapper;
+import com.ecotrack.user.repository.CitizenRepository;
+import com.ecotrack.user.service.CitizenService;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+@Service
+@RequiredArgsConstructor
+<span class="nc" id="L20">@Slf4j</span>
+public class CitizenServiceImpl implements CitizenService {
+
+    private final CitizenRepository citizenRepository;
+
+    @Override
+    @Transactional
+    public CitizenResponse createProfile(CreateCitizenProfileRequest request) {
+<span class="nc bnc" id="L28" title="All 2 branches missed.">        if (citizenRepository.findByUserId(request.getUserId()).isPresent()) {</span>
+<span class="nc" id="L29">            throw new BusinessException(&quot;Citizen profile already exists for this user&quot;, HttpStatus.CONFLICT);</span>
+        }
+
+<span class="nc" id="L32">        Citizen citizen = Citizen.builder()</span>
+<span class="nc" id="L33">                .userId(request.getUserId())</span>
+<span class="nc" id="L34">                .fullName(request.getFullName())</span>
+<span class="nc" id="L35">                .phone(request.getPhone())</span>
+<span class="nc" id="L36">                .build();</span>
+
+<span class="nc" id="L38">        citizen = citizenRepository.save(citizen);</span>
+<span class="nc" id="L39">        log.info(&quot;Citizen profile created for userId: {}&quot;, request.getUserId());</span>
+<span class="nc" id="L40">        return UserMapper.toResponse(citizen);</span>
+    }
+
+    @Override
+    public CitizenResponse getByUserId(Long userId) {
+<span class="nc" id="L45">        Citizen citizen = citizenRepository.findByUserId(userId)</span>
+<span class="nc" id="L46">                .orElseThrow(() -&gt; new ResourceNotFoundException(&quot;Citizen profile not found&quot;));</span>
+<span class="nc" id="L47">        return UserMapper.toResponse(citizen);</span>
+    }
+
+    @Override
+    @Transactional
+    public CitizenResponse updateProfile(Long userId, CitizenProfileUpdateRequest request) {
+<span class="nc" id="L53">        Citizen citizen = citizenRepository.findByUserId(userId)</span>
+<span class="nc" id="L54">                .orElseThrow(() -&gt; new ResourceNotFoundException(&quot;Citizen profile not found&quot;));</span>
+
+<span class="nc" id="L56">        citizen.setFullName(request.getFullName());</span>
+<span class="nc" id="L57">        citizen.setPhone(request.getPhone());</span>
+<span class="nc" id="L58">        citizen.setAddress(request.getAddress());</span>
+<span class="nc" id="L59">        citizen.setCity(request.getCity());</span>
+<span class="nc" id="L60">        citizen.setState(request.getState());</span>
+<span class="nc" id="L61">        citizen.setPincode(request.getPincode());</span>
+
+<span class="nc" id="L63">        citizen = citizenRepository.save(citizen);</span>
+<span class="nc" id="L64">        return UserMapper.toResponse(citizen);</span>
+    }
+
+    @Override
+    @Transactional
+    public CitizenResponse updateProfilePhoto(Long userId, String photoUrl) {
+<span class="nc" id="L70">        Citizen citizen = citizenRepository.findByUserId(userId)</span>
+<span class="nc" id="L71">                .orElseThrow(() -&gt; new ResourceNotFoundException(&quot;Citizen profile not found&quot;));</span>
+<span class="nc" id="L72">        citizen.setProfilePhoto(photoUrl);</span>
+<span class="nc" id="L73">        citizen = citizenRepository.save(citizen);</span>
+<span class="nc" id="L74">        return UserMapper.toResponse(citizen);</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>RecyclerApplicationController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">user-service</a> &gt; <a href="index.source.html" class="el_package">com.ecotrack.user.controller</a> &gt; <span class="el_source">RecyclerApplicationController.java</span></div><h1>RecyclerApplicationController.java</h1><pre class="source lang-java linenums">package com.ecotrack.user.controller;
+
+import com.ecotrack.user.dto.request.ApplicationReviewRequest;
+import com.ecotrack.user.dto.request.RecyclerApplicationRequest;
+import com.ecotrack.user.dto.response.ApiResponse;
+import com.ecotrack.user.dto.response.RecyclerApplicationResponse;
+import com.ecotrack.user.enums.ApprovalStatus;
+import com.ecotrack.user.security.AuthenticatedUser;
+import com.ecotrack.user.service.RecyclerApplicationService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.*;
+
+@RestController
+@RequestMapping(&quot;/api/v1/recycler-applications&quot;)
+@CrossOrigin(origins = &quot;*&quot;, allowedHeaders = &quot;*&quot;, methods = {RequestMethod.GET, RequestMethod.POST, RequestMethod.PUT, RequestMethod.PATCH, RequestMethod.DELETE, RequestMethod.OPTIONS})
+@RequiredArgsConstructor
+@Tag(name = &quot;Recycler Applications&quot;, description = &quot;Become a Recycler Partner - application &amp; Admin review workflow&quot;)
+public class RecyclerApplicationController {
+
+    private final RecyclerApplicationService applicationService;
+
+    @Operation(summary = &quot;Submit a Recycler Partner application - public, no login required&quot;)
+    @PostMapping(&quot;/apply&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;RecyclerApplicationResponse&gt;&gt; apply(
+            @Valid @RequestBody RecyclerApplicationRequest request) {
+<span class="nc" id="L35">        RecyclerApplicationResponse response = applicationService.submitApplication(request);</span>
+<span class="nc" id="L36">        return ResponseEntity.status(HttpStatus.CREATED)</span>
+<span class="nc" id="L37">                .body(ApiResponse.success(HttpStatus.CREATED.value(),</span>
+                        &quot;Application submitted successfully. You will be notified once it is reviewed.&quot;, response));
+    }
+
+    @Operation(summary = &quot;[Admin] List Recycler applications, optionally filtered by status&quot;)
+    @PreAuthorize(&quot;hasRole('ADMIN')&quot;)
+    @GetMapping
+    public ResponseEntity&lt;ApiResponse&lt;Page&lt;RecyclerApplicationResponse&gt;&gt;&gt; getApplications(
+            @RequestParam(required = false) ApprovalStatus status, Pageable pageable) {
+<span class="nc" id="L46">        Page&lt;RecyclerApplicationResponse&gt; response = applicationService.getApplications(status, pageable);</span>
+<span class="nc" id="L47">        return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK.value(), &quot;Applications fetched&quot;, response));</span>
+    }
+
+    @Operation(summary = &quot;[Admin] Approve or reject a Recycler application&quot;)
+    @PreAuthorize(&quot;hasRole('ADMIN')&quot;)
+    @PatchMapping(&quot;/{id}/review&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;RecyclerApplicationResponse&gt;&gt; review(
+            @PathVariable Long id,
+            @AuthenticationPrincipal AuthenticatedUser admin,
+            @Valid @RequestBody ApplicationReviewRequest request) {
+<span class="nc bnc" id="L57" title="All 2 branches missed.">        Long adminUserId = admin != null ? admin.getUserId() : null;</span>
+<span class="nc" id="L58">        RecyclerApplicationResponse response = applicationService.reviewApplication(id, adminUserId, request);</span>
+<span class="nc bnc" id="L59" title="All 2 branches missed.">        String message = Boolean.TRUE.equals(request.getApprove())</span>
+<span class="nc" id="L60">                ? &quot;Application approved. Login credentials have been created.&quot;</span>
+<span class="nc" id="L61">                : &quot;Application rejected.&quot;;</span>
+<span class="nc" id="L62">        return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK.value(), message, response));</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

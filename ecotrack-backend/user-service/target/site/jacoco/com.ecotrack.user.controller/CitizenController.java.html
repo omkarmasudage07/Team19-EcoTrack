@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>CitizenController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">user-service</a> &gt; <a href="index.source.html" class="el_package">com.ecotrack.user.controller</a> &gt; <span class="el_source">CitizenController.java</span></div><h1>CitizenController.java</h1><pre class="source lang-java linenums">package com.ecotrack.user.controller;
+
+import com.ecotrack.user.dto.request.CitizenProfileUpdateRequest;
+import com.ecotrack.user.dto.request.CreateCitizenProfileRequest;
+import com.ecotrack.user.dto.response.ApiResponse;
+import com.ecotrack.user.dto.response.CitizenResponse;
+import com.ecotrack.user.security.AuthenticatedUser;
+import com.ecotrack.user.service.CitizenService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.*;
+
+@RestController
+@RequestMapping(&quot;/api/v1/citizens&quot;)
+@RequiredArgsConstructor
+@Tag(name = &quot;Citizens&quot;, description = &quot;Citizen profile management&quot;)
+public class CitizenController {
+
+    private final CitizenService citizenService;
+
+    @Operation(summary = &quot;[Internal] Create a Citizen profile right after registration - called by Auth Service&quot;)
+    @PostMapping(&quot;/internal&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;CitizenResponse&gt;&gt; createProfile(@Valid @RequestBody CreateCitizenProfileRequest request) {
+<span class="nc" id="L30">        CitizenResponse response = citizenService.createProfile(request);</span>
+<span class="nc" id="L31">        return ResponseEntity.status(HttpStatus.CREATED)</span>
+<span class="nc" id="L32">                .body(ApiResponse.success(HttpStatus.CREATED.value(), &quot;Citizen profile created&quot;, response));</span>
+    }
+
+    @Operation(summary = &quot;[Internal] Fetch a Citizen profile by userId - used by Pickup/Material services&quot;)
+    @GetMapping(&quot;/internal/{userId}&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;CitizenResponse&gt;&gt; getByUserIdInternal(@PathVariable Long userId) {
+<span class="nc" id="L38">        CitizenResponse response = citizenService.getByUserId(userId);</span>
+<span class="nc" id="L39">        return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK.value(), &quot;Citizen fetched&quot;, response));</span>
+    }
+
+    @Operation(summary = &quot;Get the logged in Citizen's own profile&quot;)
+    @PreAuthorize(&quot;hasRole('CITIZEN')&quot;)
+    @GetMapping(&quot;/me&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;CitizenResponse&gt;&gt; getMyProfile(@AuthenticationPrincipal AuthenticatedUser user) {
+<span class="nc" id="L46">        CitizenResponse response = citizenService.getByUserId(user.getUserId());</span>
+<span class="nc" id="L47">        return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK.value(), &quot;Profile fetched&quot;, response));</span>
+    }
+
+    @Operation(summary = &quot;Update the logged in Citizen's own profile&quot;)
+    @PreAuthorize(&quot;hasRole('CITIZEN')&quot;)
+    @PutMapping(&quot;/me&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;CitizenResponse&gt;&gt; updateMyProfile(
+            @AuthenticationPrincipal AuthenticatedUser user,
+            @Valid @RequestBody CitizenProfileUpdateRequest request) {
+<span class="nc" id="L56">        CitizenResponse response = citizenService.updateProfile(user.getUserId(), request);</span>
+<span class="nc" id="L57">        return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK.value(), &quot;Profile updated successfully&quot;, response));</span>
+    }
+
+    @Operation(summary = &quot;Update the logged in Citizen's profile photo&quot;)
+    @PreAuthorize(&quot;hasRole('CITIZEN')&quot;)
+    @PatchMapping(&quot;/me/photo&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;CitizenResponse&gt;&gt; updateMyPhoto(
+            @AuthenticationPrincipal AuthenticatedUser user,
+            @RequestParam String photoUrl) {
+<span class="nc" id="L66">        CitizenResponse response = citizenService.updateProfilePhoto(user.getUserId(), photoUrl);</span>
+<span class="nc" id="L67">        return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK.value(), &quot;Profile photo updated&quot;, response));</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>IndustryController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">user-service</a> &gt; <a href="index.source.html" class="el_package">com.ecotrack.user.controller</a> &gt; <span class="el_source">IndustryController.java</span></div><h1>IndustryController.java</h1><pre class="source lang-java linenums">package com.ecotrack.user.controller;
+
+import com.ecotrack.user.dto.response.ApiResponse;
+import com.ecotrack.user.dto.response.IndustryResponse;
+import com.ecotrack.user.security.AuthenticatedUser;
+import com.ecotrack.user.service.IndustryService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.*;
+
+@RestController
+@RequestMapping(&quot;/api/v1/industries&quot;)
+@RequiredArgsConstructor
+@Tag(name = &quot;Industries&quot;, description = &quot;Industrial Buyer profile management&quot;)
+public class IndustryController {
+
+    private final IndustryService industryService;
+
+    @Operation(summary = &quot;[Internal] Fetch an Industry profile by userId - used by Material service&quot;)
+    @GetMapping(&quot;/internal/{userId}&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;IndustryResponse&gt;&gt; getByUserIdInternal(@PathVariable Long userId) {
+<span class="nc" id="L29">        IndustryResponse response = industryService.getByUserId(userId);</span>
+<span class="nc" id="L30">        return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK.value(), &quot;Industry fetched&quot;, response));</span>
+    }
+
+    @Operation(summary = &quot;Get the logged in Industry's own profile&quot;)
+    @PreAuthorize(&quot;hasRole('INDUSTRY')&quot;)
+    @GetMapping(&quot;/me&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;IndustryResponse&gt;&gt; getMyProfile(@AuthenticationPrincipal AuthenticatedUser user) {
+<span class="nc" id="L37">        IndustryResponse response = industryService.getByUserId(user.getUserId());</span>
+<span class="nc" id="L38">        return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK.value(), &quot;Profile fetched&quot;, response));</span>
+    }
+
+    @Operation(summary = &quot;Get an Industry's public company details by id - e.g. for a Recycler viewing an order&quot;)
+    @PreAuthorize(&quot;hasAnyRole('RECYCLER','ADMIN')&quot;)
+    @GetMapping(&quot;/{id}&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;IndustryResponse&gt;&gt; getById(@PathVariable Long id) {
+<span class="nc" id="L45">        IndustryResponse response = industryService.getById(id);</span>
+<span class="nc" id="L46">        return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK.value(), &quot;Industry fetched&quot;, response));</span>
+    }
+
+    @Operation(summary = &quot;[Admin] Search / list all Industries&quot;)
+    @PreAuthorize(&quot;hasRole('ADMIN')&quot;)
+    @GetMapping
+    public ResponseEntity&lt;ApiResponse&lt;Page&lt;IndustryResponse&gt;&gt;&gt; search(
+            @RequestParam(required = false) String companyName, Pageable pageable) {
+<span class="nc" id="L54">        Page&lt;IndustryResponse&gt; response = industryService.search(companyName, pageable);</span>
+<span class="nc" id="L55">        return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK.value(), &quot;Industries fetched&quot;, response));</span>
+    }
+
+    @Operation(summary = &quot;[Admin] Suspend or reactivate an Industry&quot;)
+    @PreAuthorize(&quot;hasRole('ADMIN')&quot;)
+    @PatchMapping(&quot;/{id}/suspend&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;IndustryResponse&gt;&gt; suspend(
+            @PathVariable Long id, @RequestParam boolean suspend) {
+<span class="nc" id="L63">        IndustryResponse response = industryService.suspend(id, suspend);</span>
+<span class="nc bnc" id="L64" title="All 2 branches missed.">        String message = suspend ? &quot;Industry suspended&quot; : &quot;Industry reactivated&quot;;</span>
+<span class="nc" id="L65">        return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK.value(), message, response));</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

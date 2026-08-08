@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>UserMapper.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">user-service</a> &gt; <a href="index.source.html" class="el_package">com.ecotrack.user.mapper</a> &gt; <span class="el_source">UserMapper.java</span></div><h1>UserMapper.java</h1><pre class="source lang-java linenums">package com.ecotrack.user.mapper;
+
+import com.ecotrack.user.dto.response.*;
+import com.ecotrack.user.entity.*;
+
+public final class UserMapper {
+
+    private UserMapper() {
+    }
+
+    public static CitizenResponse toResponse(Citizen citizen) {
+<span class="nc" id="L12">        return CitizenResponse.builder()</span>
+<span class="nc" id="L13">                .id(citizen.getId())</span>
+<span class="nc" id="L14">                .userId(citizen.getUserId())</span>
+<span class="nc" id="L15">                .fullName(citizen.getFullName())</span>
+<span class="nc" id="L16">                .phone(citizen.getPhone())</span>
+<span class="nc" id="L17">                .profilePhoto(citizen.getProfilePhoto())</span>
+<span class="nc" id="L18">                .address(citizen.getAddress())</span>
+<span class="nc" id="L19">                .city(citizen.getCity())</span>
+<span class="nc" id="L20">                .state(citizen.getState())</span>
+<span class="nc" id="L21">                .pincode(citizen.getPincode())</span>
+<span class="nc" id="L22">                .createdAt(citizen.getCreatedAt())</span>
+<span class="nc" id="L23">                .build();</span>
+    }
+
+    public static RecyclerResponse toResponse(Recycler recycler) {
+<span class="nc" id="L27">        return RecyclerResponse.builder()</span>
+<span class="nc" id="L28">                .id(recycler.getId())</span>
+<span class="nc" id="L29">                .userId(recycler.getUserId())</span>
+<span class="nc" id="L30">                .companyName(recycler.getCompanyName())</span>
+<span class="nc" id="L31">                .companyRegistrationNumber(recycler.getCompanyRegistrationNumber())</span>
+<span class="nc" id="L32">                .contactPerson(recycler.getContactPerson())</span>
+<span class="nc" id="L33">                .phone(recycler.getPhone())</span>
+<span class="nc" id="L34">                .address(recycler.getAddress())</span>
+<span class="nc" id="L35">                .city(recycler.getCity())</span>
+<span class="nc" id="L36">                .state(recycler.getState())</span>
+<span class="nc" id="L37">                .pincode(recycler.getPincode())</span>
+<span class="nc" id="L38">                .regionName(recycler.getRegionName())</span>
+<span class="nc" id="L39">                .approvalStatus(recycler.getApprovalStatus())</span>
+<span class="nc" id="L40">                .suspended(recycler.isSuspended())</span>
+<span class="nc" id="L41">                .createdAt(recycler.getCreatedAt())</span>
+<span class="nc" id="L42">                .build();</span>
+    }
+
+    public static IndustryResponse toResponse(Industry industry) {
+<span class="nc" id="L46">        return IndustryResponse.builder()</span>
+<span class="nc" id="L47">                .id(industry.getId())</span>
+<span class="nc" id="L48">                .userId(industry.getUserId())</span>
+<span class="nc" id="L49">                .companyName(industry.getCompanyName())</span>
+<span class="nc" id="L50">                .companyRegistrationNumber(industry.getCompanyRegistrationNumber())</span>
+<span class="nc" id="L51">                .contactPerson(industry.getContactPerson())</span>
+<span class="nc" id="L52">                .phone(industry.getPhone())</span>
+<span class="nc" id="L53">                .address(industry.getAddress())</span>
+<span class="nc" id="L54">                .city(industry.getCity())</span>
+<span class="nc" id="L55">                .state(industry.getState())</span>
+<span class="nc" id="L56">                .pincode(industry.getPincode())</span>
+<span class="nc" id="L57">                .approvalStatus(industry.getApprovalStatus())</span>
+<span class="nc" id="L58">                .suspended(industry.isSuspended())</span>
+<span class="nc" id="L59">                .createdAt(industry.getCreatedAt())</span>
+<span class="nc" id="L60">                .build();</span>
+    }
+
+    public static RecyclerApplicationResponse toResponse(RecyclerApplication application) {
+<span class="fc" id="L64">        return RecyclerApplicationResponse.builder()</span>
+<span class="fc" id="L65">                .id(application.getId())</span>
+<span class="fc" id="L66">                .companyName(application.getCompanyName())</span>
+<span class="fc" id="L67">                .registrationNumber(application.getRegistrationNumber())</span>
+<span class="fc" id="L68">                .email(application.getEmail())</span>
+<span class="fc" id="L69">                .contactPerson(application.getContactPerson())</span>
+<span class="fc" id="L70">                .phone(application.getPhone())</span>
+<span class="fc" id="L71">                .address(application.getAddress())</span>
+<span class="fc" id="L72">                .city(application.getCity())</span>
+<span class="fc" id="L73">                .state(application.getState())</span>
+<span class="fc" id="L74">                .pincode(application.getPincode())</span>
+<span class="fc" id="L75">                .documents(application.getDocuments())</span>
+<span class="fc" id="L76">                .status(application.getStatus())</span>
+<span class="fc" id="L77">                .remarks(application.getRemarks())</span>
+<span class="fc" id="L78">                .submittedDate(application.getSubmittedDate())</span>
+<span class="fc" id="L79">                .reviewedDate(application.getReviewedDate())</span>
+<span class="fc" id="L80">                .build();</span>
+    }
+
+    public static IndustryApplicationResponse toResponse(IndustryApplication application) {
+<span class="nc" id="L84">        return IndustryApplicationResponse.builder()</span>
+<span class="nc" id="L85">                .id(application.getId())</span>
+<span class="nc" id="L86">                .companyName(application.getCompanyName())</span>
+<span class="nc" id="L87">                .registrationNumber(application.getRegistrationNumber())</span>
+<span class="nc" id="L88">                .email(application.getEmail())</span>
+<span class="nc" id="L89">                .contactPerson(application.getContactPerson())</span>
+<span class="nc" id="L90">                .phone(application.getPhone())</span>
+<span class="nc" id="L91">                .address(application.getAddress())</span>
+<span class="nc" id="L92">                .city(application.getCity())</span>
+<span class="nc" id="L93">                .state(application.getState())</span>
+<span class="nc" id="L94">                .pincode(application.getPincode())</span>
+<span class="nc" id="L95">                .documents(application.getDocuments())</span>
+<span class="nc" id="L96">                .status(application.getStatus())</span>
+<span class="nc" id="L97">                .remarks(application.getRemarks())</span>
+<span class="nc" id="L98">                .submittedDate(application.getSubmittedDate())</span>
+<span class="nc" id="L99">                .reviewedDate(application.getReviewedDate())</span>
+<span class="nc" id="L100">                .build();</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

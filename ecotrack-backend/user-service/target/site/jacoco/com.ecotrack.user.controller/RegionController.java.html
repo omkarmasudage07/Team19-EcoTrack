@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>RegionController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">user-service</a> &gt; <a href="index.source.html" class="el_package">com.ecotrack.user.controller</a> &gt; <span class="el_source">RegionController.java</span></div><h1>RegionController.java</h1><pre class="source lang-java linenums">package com.ecotrack.user.controller;
+
+import com.ecotrack.user.dto.request.RegionRequest;
+import com.ecotrack.user.dto.response.ApiResponse;
+import com.ecotrack.user.dto.response.RegionResponse;
+import com.ecotrack.user.service.RegionService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+@RestController
+@RequestMapping(&quot;/api/v1/users/regions&quot;)
+@RequiredArgsConstructor
+@Tag(name = &quot;Region Master&quot;, description = &quot;Region management endpoints for Citizens, Recyclers, and Admins&quot;)
+public class RegionController {
+
+    private final RegionService regionService;
+
+    @Operation(summary = &quot;Get active regions for dropdown selection (Public/Citizen/Recycler)&quot;)
+    @GetMapping
+    public ResponseEntity&lt;ApiResponse&lt;List&lt;RegionResponse&gt;&gt;&gt; getActiveRegions() {
+<span class="fc" id="L28">        List&lt;RegionResponse&gt; regions = regionService.getActiveRegions();</span>
+<span class="fc" id="L29">        return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK.value(), &quot;Regions fetched successfully&quot;, regions));</span>
+    }
+
+    @Operation(summary = &quot;Get all regions including inactive ones (Admin)&quot;)
+    @GetMapping(&quot;/all&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;List&lt;RegionResponse&gt;&gt;&gt; getAllRegions() {
+<span class="nc" id="L35">        List&lt;RegionResponse&gt; regions = regionService.getAllRegions();</span>
+<span class="nc" id="L36">        return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK.value(), &quot;All regions fetched successfully&quot;, regions));</span>
+    }
+
+    @Operation(summary = &quot;Get region details by id&quot;)
+    @GetMapping(&quot;/{id}&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;RegionResponse&gt;&gt; getRegionById(@PathVariable Long id) {
+<span class="nc" id="L42">        RegionResponse region = regionService.getRegionById(id);</span>
+<span class="nc" id="L43">        return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK.value(), &quot;Region fetched successfully&quot;, region));</span>
+    }
+
+    @Operation(summary = &quot;Create a new administrative region (Admin)&quot;)
+    @PostMapping
+    public ResponseEntity&lt;ApiResponse&lt;RegionResponse&gt;&gt; createRegion(@Valid @RequestBody RegionRequest request) {
+<span class="fc" id="L49">        RegionResponse response = regionService.createRegion(request);</span>
+<span class="fc" id="L50">        return ResponseEntity.status(HttpStatus.CREATED)</span>
+<span class="fc" id="L51">                .body(ApiResponse.success(HttpStatus.CREATED.value(), &quot;Region created successfully&quot;, response));</span>
+    }
+
+    @Operation(summary = &quot;Update an existing region (Admin)&quot;)
+    @PutMapping(&quot;/{id}&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;RegionResponse&gt;&gt; updateRegion(
+            @PathVariable Long id,
+            @Valid @RequestBody RegionRequest request) {
+<span class="nc" id="L59">        RegionResponse response = regionService.updateRegion(id, request);</span>
+<span class="nc" id="L60">        return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK.value(), &quot;Region updated successfully&quot;, response));</span>
+    }
+
+    @Operation(summary = &quot;Activate or deactivate a region (Admin)&quot;)
+    @PatchMapping(&quot;/{id}/toggle&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;Void&gt;&gt; toggleRegionStatus(
+            @PathVariable Long id,
+            @RequestParam boolean active) {
+<span class="nc" id="L68">        regionService.toggleRegionStatus(id, active);</span>
+<span class="nc" id="L69">        return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK.value(), &quot;Region status updated successfully&quot;, null));</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

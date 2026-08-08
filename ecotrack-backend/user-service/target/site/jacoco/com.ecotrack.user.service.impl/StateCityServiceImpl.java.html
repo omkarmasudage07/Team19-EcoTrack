@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>StateCityServiceImpl.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">user-service</a> &gt; <a href="index.source.html" class="el_package">com.ecotrack.user.service.impl</a> &gt; <span class="el_source">StateCityServiceImpl.java</span></div><h1>StateCityServiceImpl.java</h1><pre class="source lang-java linenums">package com.ecotrack.user.service.impl;
+
+import com.ecotrack.user.repository.IndustryApplicationRepository;
+import com.ecotrack.user.repository.IndustryRepository;
+import com.ecotrack.user.repository.RecyclerApplicationRepository;
+import com.ecotrack.user.repository.RecyclerRepository;
+import com.ecotrack.user.service.StateCityService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+
+import java.util.*;
+
+@Service
+@RequiredArgsConstructor
+public class StateCityServiceImpl implements StateCityService {
+
+    private final RecyclerApplicationRepository recyclerApplicationRepository;
+    private final IndustryApplicationRepository industryApplicationRepository;
+    private final RecyclerRepository recyclerRepository;
+    private final IndustryRepository industryRepository;
+
+<span class="fc" id="L22">    private static final Map&lt;String, List&lt;String&gt;&gt; STATE_CITY_MAP = new LinkedHashMap&lt;&gt;();</span>
+
+    static {
+<span class="fc" id="L25">        STATE_CITY_MAP.put(&quot;Maharashtra&quot;, List.of(&quot;Mumbai&quot;, &quot;Pune&quot;, &quot;Kolhapur&quot;, &quot;Satara&quot;, &quot;Nashik&quot;, &quot;Nagpur&quot;, &quot;Thane&quot;, &quot;Solapur&quot;, &quot;Aurangabad&quot;, &quot;Amravati&quot;));</span>
+<span class="fc" id="L26">        STATE_CITY_MAP.put(&quot;Rajasthan&quot;, List.of(&quot;Jaipur&quot;, &quot;Jodhpur&quot;, &quot;Udaipur&quot;, &quot;Ajmer&quot;, &quot;Kota&quot;, &quot;Bikaner&quot;, &quot;Bhilwara&quot;, &quot;Alwar&quot;));</span>
+<span class="fc" id="L27">        STATE_CITY_MAP.put(&quot;Gujarat&quot;, List.of(&quot;Ahmedabad&quot;, &quot;Surat&quot;, &quot;Vadodara&quot;, &quot;Rajkot&quot;, &quot;Bhavnagar&quot;, &quot;Jamnagar&quot;, &quot;Gandhinagar&quot;));</span>
+<span class="fc" id="L28">        STATE_CITY_MAP.put(&quot;Karnataka&quot;, List.of(&quot;Bengaluru&quot;, &quot;Mysuru&quot;, &quot;Hubballi&quot;, &quot;Mangaluru&quot;, &quot;Belagavi&quot;, &quot;Davanagere&quot;, &quot;Ballari&quot;));</span>
+<span class="fc" id="L29">        STATE_CITY_MAP.put(&quot;Delhi&quot;, List.of(&quot;New Delhi&quot;, &quot;North Delhi&quot;, &quot;South Delhi&quot;, &quot;West Delhi&quot;, &quot;Central Delhi&quot;, &quot;East Delhi&quot;));</span>
+<span class="fc" id="L30">        STATE_CITY_MAP.put(&quot;Tamil Nadu&quot;, List.of(&quot;Chennai&quot;, &quot;Coimbatore&quot;, &quot;Madurai&quot;, &quot;Tiruchirappalli&quot;, &quot;Salem&quot;, &quot;Tirunelveli&quot;, &quot;Vellore&quot;));</span>
+<span class="fc" id="L31">        STATE_CITY_MAP.put(&quot;Uttar Pradesh&quot;, List.of(&quot;Lucknow&quot;, &quot;Kanpur&quot;, &quot;Agra&quot;, &quot;Varanasi&quot;, &quot;Noida&quot;, &quot;Ghaziabad&quot;, &quot;Meerut&quot;, &quot;Prayagraj&quot;));</span>
+<span class="fc" id="L32">        STATE_CITY_MAP.put(&quot;West Bengal&quot;, List.of(&quot;Kolkata&quot;, &quot;Howrah&quot;, &quot;Durgapur&quot;, &quot;Siliguri&quot;, &quot;Asansol&quot;, &quot;Bardhaman&quot;));</span>
+<span class="fc" id="L33">        STATE_CITY_MAP.put(&quot;Telangana&quot;, List.of(&quot;Hyderabad&quot;, &quot;Warangal&quot;, &quot;Nizamabad&quot;, &quot;Karimnagar&quot;, &quot;Khammam&quot;));</span>
+<span class="fc" id="L34">        STATE_CITY_MAP.put(&quot;Madhya Pradesh&quot;, List.of(&quot;Bhopal&quot;, &quot;Indore&quot;, &quot;Gwalior&quot;, &quot;Jabalpur&quot;, &quot;Ujjain&quot;, &quot;Sagar&quot;));</span>
+<span class="fc" id="L35">        STATE_CITY_MAP.put(&quot;Punjab&quot;, List.of(&quot;Ludhiana&quot;, &quot;Amritsar&quot;, &quot;Jalandhar&quot;, &quot;Patiala&quot;, &quot;Bathinda&quot;));</span>
+<span class="fc" id="L36">        STATE_CITY_MAP.put(&quot;Haryana&quot;, List.of(&quot;Gurugram&quot;, &quot;Faridabad&quot;, &quot;Panipat&quot;, &quot;Ambala&quot;, &quot;Karnal&quot;));</span>
+<span class="fc" id="L37">        STATE_CITY_MAP.put(&quot;Kerala&quot;, List.of(&quot;Thiruvananthapuram&quot;, &quot;Kochi&quot;, &quot;Kozhikode&quot;, &quot;Thrissur&quot;, &quot;Kollam&quot;));</span>
+<span class="fc" id="L38">        STATE_CITY_MAP.put(&quot;Bihar&quot;, List.of(&quot;Patna&quot;, &quot;Gaya&quot;, &quot;Bhagalpur&quot;, &quot;Muzaffarpur&quot;, &quot;Purnia&quot;));</span>
+<span class="fc" id="L39">        STATE_CITY_MAP.put(&quot;Goa&quot;, List.of(&quot;Panaji&quot;, &quot;Margao&quot;, &quot;Vasco da Gama&quot;, &quot;Mapusa&quot;));</span>
+<span class="fc" id="L40">    }</span>
+
+    @Override
+    public List&lt;String&gt; getAllStates() {
+<span class="fc" id="L44">        return new ArrayList&lt;&gt;(STATE_CITY_MAP.keySet());</span>
+    }
+
+    @Override
+    public List&lt;String&gt; getCitiesByState(String stateName) {
+<span class="pc bpc" id="L49" title="1 of 2 branches missed.">        if (stateName == null) {</span>
+<span class="nc" id="L50">            return Collections.emptyList();</span>
+        }
+<span class="fc" id="L52">        return STATE_CITY_MAP.entrySet().stream()</span>
+<span class="fc" id="L53">                .filter(e -&gt; e.getKey().equalsIgnoreCase(stateName.trim()))</span>
+<span class="fc" id="L54">                .map(Map.Entry::getValue)</span>
+<span class="fc" id="L55">                .findFirst()</span>
+<span class="fc" id="L56">                .orElse(Collections.emptyList());</span>
+    }
+
+    @Override
+    public boolean isValidStateAndCity(String stateName, String cityName) {
+<span class="pc bpc" id="L61" title="2 of 4 branches missed.">        if (stateName == null || cityName == null) {</span>
+<span class="nc" id="L62">            return false;</span>
+        }
+<span class="fc" id="L64">        List&lt;String&gt; cities = getCitiesByState(stateName);</span>
+<span class="fc" id="L65">        return cities.stream().anyMatch(c -&gt; c.equalsIgnoreCase(cityName.trim()));</span>
+    }
+
+    @Override
+    public boolean isGstNumberAlreadyRegistered(String gstNumber) {
+<span class="pc bpc" id="L70" title="2 of 4 branches missed.">        if (gstNumber == null || gstNumber.isBlank()) {</span>
+<span class="nc" id="L71">            return false;</span>
+        }
+<span class="fc" id="L73">        String formattedGst = gstNumber.trim();</span>
+<span class="fc bfc" id="L74" title="All 2 branches covered.">        return recyclerApplicationRepository.existsByRegistrationNumberIgnoreCase(formattedGst)</span>
+<span class="pc bpc" id="L75" title="1 of 2 branches missed.">                || industryApplicationRepository.existsByRegistrationNumberIgnoreCase(formattedGst)</span>
+<span class="pc bpc" id="L76" title="1 of 2 branches missed.">                || recyclerRepository.existsByCompanyRegistrationNumberIgnoreCase(formattedGst)</span>
+<span class="pc bpc" id="L77" title="1 of 2 branches missed.">                || industryRepository.existsByCompanyRegistrationNumberIgnoreCase(formattedGst);</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

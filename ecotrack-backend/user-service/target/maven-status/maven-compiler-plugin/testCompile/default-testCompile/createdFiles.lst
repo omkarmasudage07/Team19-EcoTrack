@@ -1,0 +1,4 @@
+com\ecotrack\user\controller\RegionControllerTest.class
+com\ecotrack\user\service\RecyclerApplicationServiceImplTest.class
+com\ecotrack\user\service\impl\RegionServiceImplTest.class
+com\ecotrack\user\service\impl\StateCityServiceImplTest.class

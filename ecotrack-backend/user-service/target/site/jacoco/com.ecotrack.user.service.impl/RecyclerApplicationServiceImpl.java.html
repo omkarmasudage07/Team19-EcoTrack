@@ -1,0 +1,141 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>RecyclerApplicationServiceImpl.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">user-service</a> &gt; <a href="index.source.html" class="el_package">com.ecotrack.user.service.impl</a> &gt; <span class="el_source">RecyclerApplicationServiceImpl.java</span></div><h1>RecyclerApplicationServiceImpl.java</h1><pre class="source lang-java linenums">package com.ecotrack.user.service.impl;
+
+import com.ecotrack.user.client.AuthServiceClient;
+import com.ecotrack.user.client.dto.CreateCredentialsRequest;
+import com.ecotrack.user.client.dto.CredentialsResponse;
+import com.ecotrack.user.dto.request.ApplicationReviewRequest;
+import com.ecotrack.user.dto.request.RecyclerApplicationRequest;
+import com.ecotrack.user.dto.response.RecyclerApplicationResponse;
+import com.ecotrack.user.entity.Recycler;
+import com.ecotrack.user.entity.RecyclerApplication;
+import com.ecotrack.user.enums.ApprovalStatus;
+import com.ecotrack.user.enums.RoleType;
+import com.ecotrack.user.exception.BusinessException;
+import com.ecotrack.user.exception.ResourceNotFoundException;
+import com.ecotrack.user.mapper.UserMapper;
+import com.ecotrack.user.producer.ApplicationEventProducer;
+import com.ecotrack.user.repository.RecyclerApplicationRepository;
+import com.ecotrack.user.repository.RecyclerRepository;
+import com.ecotrack.user.service.RecyclerApplicationService;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDateTime;
+
+import com.ecotrack.user.service.StateCityService;
+
+@Service
+@RequiredArgsConstructor
+<span class="fc" id="L34">@Slf4j</span>
+public class RecyclerApplicationServiceImpl implements RecyclerApplicationService {
+
+    private final RecyclerApplicationRepository applicationRepository;
+    private final RecyclerRepository recyclerRepository;
+    private final AuthServiceClient authServiceClient;
+    private final ApplicationEventProducer applicationEventProducer;
+    private final StateCityService stateCityService;
+
+    @Override
+    @Transactional
+    public RecyclerApplicationResponse submitApplication(RecyclerApplicationRequest request) {
+<span class="fc bfc" id="L46" title="All 2 branches covered.">        if (stateCityService.isGstNumberAlreadyRegistered(request.getRegistrationNumber())) {</span>
+<span class="fc" id="L47">            throw new BusinessException(&quot;GST Number already registered.&quot;, HttpStatus.CONFLICT);</span>
+        }
+
+<span class="pc bpc" id="L50" title="1 of 2 branches missed.">        if (applicationRepository.existsByEmailAndStatus(request.getEmail(), ApprovalStatus.PENDING)) {</span>
+<span class="fc" id="L51">            throw new BusinessException(</span>
+                    &quot;An application with this email is already pending review&quot;, HttpStatus.CONFLICT);
+        }
+
+<span class="nc bnc" id="L55" title="All 2 branches missed.">        if (!stateCityService.isValidStateAndCity(request.getState(), request.getCity())) {</span>
+<span class="nc" id="L56">            throw new BusinessException(&quot;Selected City does not belong to the selected State.&quot;, HttpStatus.BAD_REQUEST);</span>
+        }
+
+<span class="nc" id="L59">        RecyclerApplication application = RecyclerApplication.builder()</span>
+<span class="nc" id="L60">                .companyName(request.getCompanyName())</span>
+<span class="nc" id="L61">                .registrationNumber(request.getRegistrationNumber())</span>
+<span class="nc" id="L62">                .email(request.getEmail())</span>
+<span class="nc" id="L63">                .contactPerson(request.getContactPerson())</span>
+<span class="nc" id="L64">                .phone(request.getPhone())</span>
+<span class="nc" id="L65">                .address(request.getAddress())</span>
+<span class="nc" id="L66">                .city(request.getCity())</span>
+<span class="nc" id="L67">                .state(request.getState())</span>
+<span class="nc" id="L68">                .pincode(request.getPincode())</span>
+<span class="nc" id="L69">                .documents(request.getDocuments())</span>
+<span class="nc" id="L70">                .status(ApprovalStatus.PENDING)</span>
+<span class="nc" id="L71">                .build();</span>
+
+<span class="nc" id="L73">        application = applicationRepository.save(application);</span>
+<span class="nc" id="L74">        log.info(&quot;Recycler partnership application submitted: {} ({})&quot;, application.getCompanyName(), application.getEmail());</span>
+<span class="nc" id="L75">        return UserMapper.toResponse(application);</span>
+    }
+
+    @Override
+    public Page&lt;RecyclerApplicationResponse&gt; getApplications(ApprovalStatus status, Pageable pageable) {
+<span class="nc bnc" id="L80" title="All 2 branches missed.">        Page&lt;RecyclerApplication&gt; applications = (status != null)</span>
+<span class="nc" id="L81">                ? applicationRepository.findByStatus(status, pageable)</span>
+<span class="nc" id="L82">                : applicationRepository.findAll(pageable);</span>
+<span class="nc" id="L83">        return applications.map(UserMapper::toResponse);</span>
+    }
+
+    @Override
+    @Transactional
+    public RecyclerApplicationResponse reviewApplication(Long applicationId, Long adminUserId, ApplicationReviewRequest request) {
+<span class="fc" id="L89">        RecyclerApplication application = applicationRepository.findById(applicationId)</span>
+<span class="pc" id="L90">                .orElseThrow(() -&gt; new ResourceNotFoundException(&quot;Recycler application not found&quot;));</span>
+
+<span class="fc bfc" id="L92" title="All 2 branches covered.">        if (application.getStatus() != ApprovalStatus.PENDING) {</span>
+<span class="fc" id="L93">            throw new BusinessException(&quot;This application has already been reviewed&quot;, HttpStatus.CONFLICT);</span>
+        }
+
+<span class="fc" id="L96">        application.setRemarks(request.getRemarks());</span>
+<span class="fc" id="L97">        application.setReviewedDate(LocalDateTime.now());</span>
+<span class="fc" id="L98">        application.setReviewedBy(adminUserId);</span>
+
+<span class="pc bpc" id="L100" title="1 of 2 branches missed.">        if (Boolean.TRUE.equals(request.getApprove())) {</span>
+<span class="fc" id="L101">            application.setStatus(ApprovalStatus.APPROVED);</span>
+
+<span class="fc" id="L103">            var responseWrapper = authServiceClient.createCredentials(</span>
+<span class="fc" id="L104">                    new CreateCredentialsRequest(application.getEmail(), RoleType.RECYCLER));</span>
+<span class="pc bpc" id="L105" title="2 of 4 branches missed.">            if (responseWrapper == null || responseWrapper.getData() == null) {</span>
+<span class="nc" id="L106">                throw new BusinessException(&quot;Failed to obtain credentials from Auth Service&quot;, HttpStatus.INTERNAL_SERVER_ERROR);</span>
+            }
+<span class="fc" id="L108">            CredentialsResponse credentials = responseWrapper.getData();</span>
+
+<span class="fc" id="L110">            Recycler recycler = recyclerRepository.findByUserId(credentials.getUserId())</span>
+<span class="fc" id="L111">                    .orElseGet(() -&gt; Recycler.builder().userId(credentials.getUserId()).build());</span>
+
+<span class="fc" id="L113">            recycler.setCompanyName(application.getCompanyName());</span>
+<span class="fc" id="L114">            recycler.setCompanyRegistrationNumber(application.getRegistrationNumber());</span>
+<span class="fc" id="L115">            recycler.setContactPerson(application.getContactPerson());</span>
+<span class="fc" id="L116">            recycler.setPhone(application.getPhone());</span>
+<span class="fc" id="L117">            recycler.setAddress(application.getAddress());</span>
+<span class="fc" id="L118">            recycler.setCity(application.getCity());</span>
+<span class="fc" id="L119">            recycler.setState(application.getState());</span>
+<span class="fc" id="L120">            recycler.setPincode(application.getPincode());</span>
+<span class="fc" id="L121">            recycler.setApprovalStatus(ApprovalStatus.APPROVED);</span>
+<span class="fc" id="L122">            recycler.setApprovedBy(adminUserId);</span>
+<span class="fc" id="L123">            recycler.setApprovedDate(LocalDateTime.now());</span>
+
+<span class="fc" id="L125">            recyclerRepository.save(recycler);</span>
+
+<span class="fc" id="L127">            applicationEventProducer.publishRecyclerApproved(</span>
+<span class="fc" id="L128">                    credentials.getUserId(), application.getCompanyName(), application.getEmail());</span>
+
+<span class="fc" id="L130">            log.info(&quot;Recycler application {} approved. Temporary password for {}: {}&quot;,</span>
+<span class="fc" id="L131">                    applicationId, credentials.getEmail(), credentials.getTemporaryPassword());</span>
+<span class="fc" id="L132">        } else {</span>
+<span class="nc" id="L133">            application.setStatus(ApprovalStatus.REJECTED);</span>
+<span class="nc" id="L134">            log.info(&quot;Recycler application {} rejected&quot;, applicationId);</span>
+        }
+
+<span class="fc" id="L137">        application = applicationRepository.save(application);</span>
+<span class="fc" id="L138">        return UserMapper.toResponse(application);</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

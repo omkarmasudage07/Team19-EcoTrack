@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>RegionServiceImpl.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">user-service</a> &gt; <a href="index.source.html" class="el_package">com.ecotrack.user.service.impl</a> &gt; <span class="el_source">RegionServiceImpl.java</span></div><h1>RegionServiceImpl.java</h1><pre class="source lang-java linenums">package com.ecotrack.user.service.impl;
+
+import com.ecotrack.user.dto.request.RegionRequest;
+import com.ecotrack.user.dto.response.RegionResponse;
+import com.ecotrack.user.entity.Region;
+import com.ecotrack.user.exception.BusinessException;
+import com.ecotrack.user.exception.ResourceNotFoundException;
+import com.ecotrack.user.repository.RegionRepository;
+import com.ecotrack.user.service.RegionService;
+import jakarta.annotation.PostConstruct;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.Arrays;
+import java.util.List;
+
+@Service
+@RequiredArgsConstructor
+<span class="fc" id="L22">@Slf4j</span>
+public class RegionServiceImpl implements RegionService {
+
+    private final RegionRepository regionRepository;
+
+    @PostConstruct
+    public void seedDefaultRegions() {
+<span class="nc" id="L29">        List&lt;String&gt; defaultRegions = Arrays.asList(</span>
+                &quot;Pune Region&quot;, &quot;Mumbai Region&quot;, &quot;Kolhapur Region&quot;,
+                &quot;Nagpur Region&quot;, &quot;Nashik Region&quot;, &quot;Satara Region&quot;
+        );
+
+<span class="nc bnc" id="L34" title="All 2 branches missed.">        for (String name : defaultRegions) {</span>
+<span class="nc bnc" id="L35" title="All 2 branches missed.">            if (!regionRepository.existsByNameIgnoreCase(name)) {</span>
+<span class="nc" id="L36">                String code = name.replaceAll(&quot;[^A-Za-z]&quot;, &quot;&quot;).toUpperCase();</span>
+<span class="nc bnc" id="L37" title="All 2 branches missed.">                if (code.length() &gt; 6) code = code.substring(0, 6);</span>
+<span class="nc" id="L38">                Region region = Region.builder()</span>
+<span class="nc" id="L39">                        .name(name)</span>
+<span class="nc" id="L40">                        .code(code)</span>
+<span class="nc" id="L41">                        .description(&quot;Default administrative region: &quot; + name)</span>
+<span class="nc" id="L42">                        .active(true)</span>
+<span class="nc" id="L43">                        .build();</span>
+<span class="nc" id="L44">                regionRepository.save(region);</span>
+<span class="nc" id="L45">                log.info(&quot;Seeded default region: {}&quot;, name);</span>
+            }
+<span class="nc" id="L47">        }</span>
+<span class="nc" id="L48">    }</span>
+
+    @Override
+    public List&lt;RegionResponse&gt; getAllRegions() {
+<span class="nc" id="L52">        return regionRepository.findAll().stream()</span>
+<span class="nc" id="L53">                .map(this::toResponse)</span>
+<span class="nc" id="L54">                .toList();</span>
+    }
+
+    @Override
+    public List&lt;RegionResponse&gt; getActiveRegions() {
+<span class="fc" id="L59">        return regionRepository.findByActiveTrue().stream()</span>
+<span class="fc" id="L60">                .map(this::toResponse)</span>
+<span class="fc" id="L61">                .toList();</span>
+    }
+
+    @Override
+    public RegionResponse getRegionById(Long id) {
+<span class="nc" id="L66">        Region region = regionRepository.findById(id)</span>
+<span class="nc" id="L67">                .orElseThrow(() -&gt; new ResourceNotFoundException(&quot;Region not found with id: &quot; + id));</span>
+<span class="nc" id="L68">        return toResponse(region);</span>
+    }
+
+    @Override
+    @Transactional
+    public RegionResponse createRegion(RegionRequest request) {
+<span class="fc bfc" id="L74" title="All 2 branches covered.">        if (regionRepository.existsByNameIgnoreCase(request.getName().trim())) {</span>
+<span class="fc" id="L75">            throw new BusinessException(&quot;A region with this name already exists&quot;, HttpStatus.CONFLICT);</span>
+        }
+
+<span class="fc" id="L78">        Region region = Region.builder()</span>
+<span class="fc" id="L79">                .name(request.getName().trim())</span>
+<span class="pc bpc" id="L80" title="1 of 2 branches missed.">                .code(request.getCode() != null ? request.getCode().trim().toUpperCase() : null)</span>
+<span class="fc" id="L81">                .description(request.getDescription())</span>
+<span class="pc bpc" id="L82" title="2 of 4 branches missed.">                .active(request.getActive() == null || request.getActive())</span>
+<span class="fc" id="L83">                .build();</span>
+
+<span class="fc" id="L85">        region = regionRepository.save(region);</span>
+<span class="fc" id="L86">        log.info(&quot;Created new region: {}&quot;, region.getName());</span>
+<span class="fc" id="L87">        return toResponse(region);</span>
+    }
+
+    @Override
+    @Transactional
+    public RegionResponse updateRegion(Long id, RegionRequest request) {
+<span class="nc" id="L93">        Region region = regionRepository.findById(id)</span>
+<span class="nc" id="L94">                .orElseThrow(() -&gt; new ResourceNotFoundException(&quot;Region not found with id: &quot; + id));</span>
+
+<span class="nc" id="L96">        String newName = request.getName().trim();</span>
+<span class="nc bnc" id="L97" title="All 4 branches missed.">        if (!region.getName().equalsIgnoreCase(newName) &amp;&amp; regionRepository.existsByNameIgnoreCase(newName)) {</span>
+<span class="nc" id="L98">            throw new BusinessException(&quot;A region with this name already exists&quot;, HttpStatus.CONFLICT);</span>
+        }
+
+<span class="nc" id="L101">        region.setName(newName);</span>
+<span class="nc bnc" id="L102" title="All 2 branches missed.">        if (request.getCode() != null) region.setCode(request.getCode().trim().toUpperCase());</span>
+<span class="nc bnc" id="L103" title="All 2 branches missed.">        if (request.getDescription() != null) region.setDescription(request.getDescription());</span>
+<span class="nc bnc" id="L104" title="All 2 branches missed.">        if (request.getActive() != null) region.setActive(request.getActive());</span>
+
+<span class="nc" id="L106">        region = regionRepository.save(region);</span>
+<span class="nc" id="L107">        log.info(&quot;Updated region {}: {}&quot;, id, region.getName());</span>
+<span class="nc" id="L108">        return toResponse(region);</span>
+    }
+
+    @Override
+    @Transactional
+    public void toggleRegionStatus(Long id, boolean active) {
+<span class="fc" id="L114">        Region region = regionRepository.findById(id)</span>
+<span class="pc" id="L115">                .orElseThrow(() -&gt; new ResourceNotFoundException(&quot;Region not found with id: &quot; + id));</span>
+<span class="fc" id="L116">        region.setActive(active);</span>
+<span class="fc" id="L117">        regionRepository.save(region);</span>
+<span class="fc" id="L118">        log.info(&quot;Toggled region {} active state to: {}&quot;, id, active);</span>
+<span class="fc" id="L119">    }</span>
+
+    private RegionResponse toResponse(Region region) {
+<span class="fc" id="L122">        return RegionResponse.builder()</span>
+<span class="fc" id="L123">                .id(region.getId())</span>
+<span class="fc" id="L124">                .name(region.getName())</span>
+<span class="fc" id="L125">                .code(region.getCode())</span>
+<span class="fc" id="L126">                .description(region.getDescription())</span>
+<span class="fc" id="L127">                .active(region.isActive())</span>
+<span class="fc" id="L128">                .createdAt(region.getCreatedAt())</span>
+<span class="fc" id="L129">                .build();</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

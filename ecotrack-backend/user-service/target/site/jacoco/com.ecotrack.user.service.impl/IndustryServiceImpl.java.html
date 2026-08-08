@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>IndustryServiceImpl.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">user-service</a> &gt; <a href="index.source.html" class="el_package">com.ecotrack.user.service.impl</a> &gt; <span class="el_source">IndustryServiceImpl.java</span></div><h1>IndustryServiceImpl.java</h1><pre class="source lang-java linenums">package com.ecotrack.user.service.impl;
+
+import com.ecotrack.user.dto.response.IndustryResponse;
+import com.ecotrack.user.entity.Industry;
+import com.ecotrack.user.exception.ResourceNotFoundException;
+import com.ecotrack.user.mapper.UserMapper;
+import com.ecotrack.user.repository.IndustryRepository;
+import com.ecotrack.user.service.IndustryService;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+@Service
+@RequiredArgsConstructor
+<span class="nc" id="L18">@Slf4j</span>
+public class IndustryServiceImpl implements IndustryService {
+
+    private final IndustryRepository industryRepository;
+
+    @Override
+    public IndustryResponse getByUserId(Long userId) {
+<span class="nc" id="L25">        Industry industry = industryRepository.findByUserId(userId)</span>
+<span class="nc" id="L26">                .orElseThrow(() -&gt; new ResourceNotFoundException(&quot;Industry profile not found&quot;));</span>
+<span class="nc" id="L27">        return UserMapper.toResponse(industry);</span>
+    }
+
+    @Override
+    public IndustryResponse getById(Long id) {
+<span class="nc" id="L32">        Industry industry = industryRepository.findById(id)</span>
+<span class="nc" id="L33">                .orElseThrow(() -&gt; new ResourceNotFoundException(&quot;Industry not found with id: &quot; + id));</span>
+<span class="nc" id="L34">        return UserMapper.toResponse(industry);</span>
+    }
+
+    @Override
+    public Page&lt;IndustryResponse&gt; search(String companyName, Pageable pageable) {
+<span class="nc bnc" id="L39" title="All 4 branches missed.">        Page&lt;Industry&gt; industries = (companyName != null &amp;&amp; !companyName.isBlank())</span>
+<span class="nc" id="L40">                ? industryRepository.findByCompanyNameContainingIgnoreCase(companyName, pageable)</span>
+<span class="nc" id="L41">                : industryRepository.findAll(pageable);</span>
+<span class="nc" id="L42">        return industries.map(UserMapper::toResponse);</span>
+    }
+
+    @Override
+    @Transactional
+    public IndustryResponse suspend(Long id, boolean suspend) {
+<span class="nc" id="L48">        Industry industry = industryRepository.findById(id)</span>
+<span class="nc" id="L49">                .orElseThrow(() -&gt; new ResourceNotFoundException(&quot;Industry not found with id: &quot; + id));</span>
+<span class="nc" id="L50">        industry.setSuspended(suspend);</span>
+<span class="nc" id="L51">        industry = industryRepository.save(industry);</span>
+<span class="nc bnc" id="L52" title="All 2 branches missed.">        log.info(&quot;Industry {} {}&quot;, id, suspend ? &quot;suspended&quot; : &quot;reactivated&quot;);</span>
+<span class="nc" id="L53">        return UserMapper.toResponse(industry);</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

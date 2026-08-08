@@ -1,0 +1,5 @@
+# Created at 2026-08-08T16:49:49.941
+Boot Manifest-JAR contains absolute paths in classpath 'D:\LastProject\ecotrack-backend\user-service\target\test-classes'
+Hint: <argLine>-Djdk.net.URLClassPath.disableClassPathURLCheck=true</argLine>
+'other' has different root
+
