@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ApplicationEventConsumer.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">notification-service</a> &gt; <a href="index.source.html" class="el_package">com.ecotrack.notification.consumer</a> &gt; <span class="el_source">ApplicationEventConsumer.java</span></div><h1>ApplicationEventConsumer.java</h1><pre class="source lang-java linenums">package com.ecotrack.notification.consumer;
+
+import com.ecotrack.notification.constant.RabbitMQConstants;
+import com.ecotrack.notification.enums.NotificationType;
+import com.ecotrack.notification.enums.RoleType;
+import com.ecotrack.notification.event.ApplicationApprovedEvent;
+import com.ecotrack.notification.service.NotificationService;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.amqp.rabbit.annotation.RabbitListener;
+import org.springframework.stereotype.Component;
+
+@Component
+@RequiredArgsConstructor
+<span class="nc" id="L15">@Slf4j</span>
+public class ApplicationEventConsumer {
+
+    private final NotificationService notificationService;
+
+    @RabbitListener(queues = RabbitMQConstants.QUEUE_RECYCLER_APPROVED)
+    public void onRecyclerApproved(ApplicationApprovedEvent event) {
+<span class="nc" id="L22">        notificationService.notify(</span>
+<span class="nc" id="L23">                event.getUserId(), RoleType.RECYCLER,</span>
+                &quot;Application Approved&quot;,
+<span class="nc" id="L25">                &quot;Congratulations! &quot; + event.getCompanyName() + &quot; has been approved as a Recycler Partner. You can now log in.&quot;,</span>
+                NotificationType.RECYCLER_APPROVED);
+
+<span class="nc" id="L28">        notificationService.logAudit(&quot;RECYCLER_APPROVED&quot;, event.getCompanyName() + &quot; approved as Recycler Partner&quot;);</span>
+<span class="nc" id="L29">    }</span>
+
+    @RabbitListener(queues = RabbitMQConstants.QUEUE_INDUSTRY_APPROVED)
+    public void onIndustryApproved(ApplicationApprovedEvent event) {
+<span class="nc" id="L33">        notificationService.notify(</span>
+<span class="nc" id="L34">                event.getUserId(), RoleType.INDUSTRY,</span>
+                &quot;Application Approved&quot;,
+<span class="nc" id="L36">                &quot;Congratulations! &quot; + event.getCompanyName() + &quot; has been approved as an Industrial Buyer. You can now log in.&quot;,</span>
+                NotificationType.INDUSTRY_APPROVED);
+
+<span class="nc" id="L39">        notificationService.logAudit(&quot;INDUSTRY_APPROVED&quot;, event.getCompanyName() + &quot; approved as Industrial Buyer&quot;);</span>
+<span class="nc" id="L40">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>NotificationServiceImpl.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">notification-service</a> &gt; <a href="index.source.html" class="el_package">com.ecotrack.notification.service.impl</a> &gt; <span class="el_source">NotificationServiceImpl.java</span></div><h1>NotificationServiceImpl.java</h1><pre class="source lang-java linenums">package com.ecotrack.notification.service.impl;
+
+import com.ecotrack.notification.dto.response.AuditLogResponse;
+import com.ecotrack.notification.dto.response.NotificationResponse;
+import com.ecotrack.notification.entity.AuditLog;
+import com.ecotrack.notification.entity.Notification;
+import com.ecotrack.notification.enums.NotificationType;
+import com.ecotrack.notification.enums.RoleType;
+import com.ecotrack.notification.exception.BusinessException;
+import com.ecotrack.notification.exception.ResourceNotFoundException;
+import com.ecotrack.notification.mapper.NotificationMapper;
+import com.ecotrack.notification.repository.AuditLogRepository;
+import com.ecotrack.notification.repository.NotificationRepository;
+import com.ecotrack.notification.service.NotificationService;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+@Service
+@RequiredArgsConstructor
+<span class="fc" id="L25">@Slf4j</span>
+public class NotificationServiceImpl implements NotificationService {
+
+    private final NotificationRepository notificationRepository;
+    private final AuditLogRepository auditLogRepository;
+
+    @Override
+    @Transactional
+    public void notify(Long userId, RoleType userRole, String title, String message, NotificationType type) {
+<span class="fc" id="L34">        Notification notification = Notification.builder()</span>
+<span class="fc" id="L35">                .userId(userId)</span>
+<span class="fc" id="L36">                .userRole(userRole)</span>
+<span class="fc" id="L37">                .title(title)</span>
+<span class="fc" id="L38">                .message(message)</span>
+<span class="fc" id="L39">                .type(type)</span>
+<span class="fc" id="L40">                .read(false)</span>
+<span class="fc" id="L41">                .build();</span>
+<span class="fc" id="L42">        notificationRepository.save(notification);</span>
+<span class="fc" id="L43">        log.info(&quot;Notification created for user {} ({}): {}&quot;, userId, userRole, title);</span>
+<span class="fc" id="L44">    }</span>
+
+    @Override
+    public Page&lt;NotificationResponse&gt; getMyNotifications(Long userId, Pageable pageable) {
+<span class="nc" id="L48">        return notificationRepository.findByUserIdOrderByCreatedAtDesc(userId, pageable)</span>
+<span class="nc" id="L49">                .map(NotificationMapper::toResponse);</span>
+    }
+
+    @Override
+    public long getUnreadCount(Long userId) {
+<span class="nc" id="L54">        return notificationRepository.countByUserIdAndReadFalse(userId);</span>
+    }
+
+    @Override
+    @Transactional
+    public void markAsRead(Long notificationId, Long userId) {
+<span class="fc" id="L60">        Notification notification = notificationRepository.findById(notificationId)</span>
+<span class="pc" id="L61">                .orElseThrow(() -&gt; new ResourceNotFoundException(&quot;Notification not found&quot;));</span>
+
+<span class="pc bpc" id="L63" title="1 of 2 branches missed.">        if (!notification.getUserId().equals(userId)) {</span>
+<span class="fc" id="L64">            throw new BusinessException(&quot;You can only manage your own notifications&quot;, HttpStatus.FORBIDDEN);</span>
+        }
+
+<span class="nc" id="L67">        notification.setRead(true);</span>
+<span class="nc" id="L68">        notificationRepository.save(notification);</span>
+<span class="nc" id="L69">    }</span>
+
+    @Override
+    @Transactional
+    public void markAllAsRead(Long userId) {
+<span class="nc" id="L74">        notificationRepository.markAllAsRead(userId);</span>
+<span class="nc" id="L75">    }</span>
+
+    @Override
+    @Transactional
+    public void logAudit(String action, String details) {
+<span class="nc" id="L80">        auditLogRepository.save(AuditLog.builder().action(action).details(details).build());</span>
+<span class="nc" id="L81">    }</span>
+
+    @Override
+    public Page&lt;AuditLogResponse&gt; getAuditLogs(Pageable pageable) {
+<span class="nc" id="L85">        return auditLogRepository.findAllByOrderByCreatedAtDesc(pageable)</span>
+<span class="nc" id="L86">                .map(NotificationMapper::toResponse);</span>
+    }
+
+    @Override
+    public Page&lt;AuditLogResponse&gt; getFilteredAuditLogs(String role, String region, Integer status, String search, Pageable pageable) {
+<span class="nc bnc" id="L91" title="All 4 branches missed.">        String cleanSearch = (search != null &amp;&amp; !search.isBlank()) ? search.trim() : null;</span>
+<span class="nc bnc" id="L92" title="All 6 branches missed.">        String cleanRole = (role != null &amp;&amp; !role.isBlank() &amp;&amp; !role.equalsIgnoreCase(&quot;ALL&quot;)) ? role.trim() : null;</span>
+<span class="nc bnc" id="L93" title="All 6 branches missed.">        String cleanRegion = (region != null &amp;&amp; !region.isBlank() &amp;&amp; !region.equalsIgnoreCase(&quot;ALL&quot;)) ? region.trim() : null;</span>
+<span class="nc" id="L94">        return auditLogRepository.searchAuditLogs(cleanRole, cleanRegion, status, cleanSearch, pageable)</span>
+<span class="nc" id="L95">                .map(NotificationMapper::toResponse);</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

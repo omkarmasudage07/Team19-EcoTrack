@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>RewardEventConsumer.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">notification-service</a> &gt; <a href="index.source.html" class="el_package">com.ecotrack.notification.consumer</a> &gt; <span class="el_source">RewardEventConsumer.java</span></div><h1>RewardEventConsumer.java</h1><pre class="source lang-java linenums">package com.ecotrack.notification.consumer;
+
+import com.ecotrack.notification.constant.RabbitMQConstants;
+import com.ecotrack.notification.enums.NotificationType;
+import com.ecotrack.notification.enums.RoleType;
+import com.ecotrack.notification.event.RewardRedeemedEvent;
+import com.ecotrack.notification.service.NotificationService;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.amqp.rabbit.annotation.RabbitListener;
+import org.springframework.stereotype.Component;
+
+@Component
+@RequiredArgsConstructor
+<span class="nc" id="L15">@Slf4j</span>
+public class RewardEventConsumer {
+
+    private final NotificationService notificationService;
+
+    @RabbitListener(queues = RabbitMQConstants.QUEUE_REWARD_REDEEMED)
+    public void onRewardRedeemed(RewardRedeemedEvent event) {
+<span class="nc" id="L22">        log.info(&quot;Received reward.redeemed event for order {} (Citizen {})&quot;, event.getOrderNumber(), event.getCitizenId());</span>
+
+<span class="nc" id="L24">        String message = &quot;Congratulations! You successfully redeemed '&quot; + event.getRewardTitle() +</span>
+<span class="nc" id="L25">                &quot;' for &quot; + event.getPointsSpent() + &quot; EcoPoints. Order #&quot; + event.getOrderNumber() +</span>
+<span class="nc bnc" id="L26" title="All 2 branches missed.">                (event.getVoucherCode() != null ? &quot; (Voucher Code: &quot; + event.getVoucherCode() + &quot;)&quot; : &quot;&quot;);</span>
+
+<span class="nc" id="L28">        notificationService.notify(</span>
+<span class="nc" id="L29">                event.getCitizenId(),</span>
+                RoleType.CITIZEN,
+                &quot;Reward Redeemed Successfully!&quot;,
+                message,
+                NotificationType.REWARD_REDEEMED);
+
+<span class="nc" id="L35">        notificationService.logAudit(&quot;REWARD_REDEEMED&quot;, &quot;Reward order #&quot; + event.getOrderNumber() + &quot; redeemed&quot;);</span>
+<span class="nc" id="L36">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>
