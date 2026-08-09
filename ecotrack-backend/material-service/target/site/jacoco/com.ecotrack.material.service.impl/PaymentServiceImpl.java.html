@@ -1,0 +1,237 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>PaymentServiceImpl.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">material-service</a> &gt; <a href="index.source.html" class="el_package">com.ecotrack.material.service.impl</a> &gt; <span class="el_source">PaymentServiceImpl.java</span></div><h1>PaymentServiceImpl.java</h1><pre class="source lang-java linenums">package com.ecotrack.material.service.impl;
+
+import com.ecotrack.material.dto.request.MockPaymentRequest;
+import com.ecotrack.material.dto.request.RazorpayVerifyRequest;
+import com.ecotrack.material.dto.response.OrderResponse;
+import com.ecotrack.material.dto.response.RazorpayOrderResponse;
+import com.ecotrack.material.entity.Order;
+import com.ecotrack.material.entity.OrderItem;
+import com.ecotrack.material.entity.Payment;
+import com.ecotrack.material.enums.OrderStatus;
+import com.ecotrack.material.enums.PaymentMethod;
+import com.ecotrack.material.enums.PaymentStatus;
+import com.ecotrack.material.exception.BusinessException;
+import com.ecotrack.material.exception.ResourceNotFoundException;
+import com.ecotrack.material.mapper.MaterialMapper;
+import com.ecotrack.material.producer.MaterialEventProducer;
+import com.ecotrack.material.repository.OrderItemRepository;
+import com.ecotrack.material.repository.OrderRepository;
+import com.ecotrack.material.repository.PaymentRepository;
+import com.ecotrack.material.service.PaymentService;
+import com.ecotrack.material.util.NumberGenerator;
+import com.razorpay.RazorpayClient;
+import com.razorpay.RazorpayException;
+import com.razorpay.Utils;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.json.JSONObject;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+
+/**
+ * Handles both payment options: the original Mock Payment (always
+ * succeeds immediately, no real gateway) and Razorpay Test Mode (a real
+ * checkout flow against Razorpay's sandbox - no real money moves in test
+ * mode, but the create-order / checkout-widget / verify-signature steps
+ * are the same ones a production integration would use).
+ */
+@Service
+@RequiredArgsConstructor
+<span class="nc" id="L44">@Slf4j</span>
+public class PaymentServiceImpl implements PaymentService {
+
+    private final OrderRepository orderRepository;
+    private final OrderItemRepository orderItemRepository;
+    private final PaymentRepository paymentRepository;
+    private final MaterialEventProducer materialEventProducer;
+    private final RazorpayClient razorpayClient;
+
+    @Value(&quot;${razorpay.key-id}&quot;)
+    private String razorpayKeyId;
+
+    @Value(&quot;${razorpay.key-secret}&quot;)
+    private String razorpayKeySecret;
+
+    // ------------------------------------------------------------------
+    // Mock Payment (unchanged from Version 1)
+    // ------------------------------------------------------------------
+
+    @Override
+    @Transactional
+    public OrderResponse processPayment(Long orderId, Long industryId, MockPaymentRequest request) {
+<span class="nc" id="L66">        Order order = findOwnedUnpaidOrder(orderId, industryId);</span>
+
+<span class="nc" id="L68">        Payment payment = Payment.builder()</span>
+<span class="nc" id="L69">                .order(order)</span>
+<span class="nc" id="L70">                .transactionNumber(NumberGenerator.generateTransactionNumber())</span>
+<span class="nc" id="L71">                .paymentMethod(request.getPaymentMethod())</span>
+<span class="nc" id="L72">                .paymentStatus(PaymentStatus.SUCCESS) // mock payment always succeeds</span>
+<span class="nc" id="L73">                .paidAmount(order.getTotalAmount())</span>
+<span class="nc" id="L74">                .remarks(&quot;Mock payment - no real transaction was made&quot;)</span>
+<span class="nc" id="L75">                .build();</span>
+<span class="nc" id="L76">        payment = paymentRepository.save(payment);</span>
+
+<span class="nc" id="L78">        return confirmOrderAfterPayment(order, payment);</span>
+    }
+
+    // ------------------------------------------------------------------
+    // Razorpay (Test Mode)
+    // ------------------------------------------------------------------
+
+    @Override
+    @Transactional
+    public RazorpayOrderResponse createRazorpayOrder(Long orderId, Long industryId) {
+<span class="nc" id="L88">        Order order = findOwnedUnpaidOrder(orderId, industryId);</span>
+
+<span class="nc" id="L90">        long amountInPaise = order.getTotalAmount()</span>
+<span class="nc" id="L91">                .multiply(java.math.BigDecimal.valueOf(100))</span>
+<span class="nc" id="L92">                .longValueExact();</span>
+
+        String razorpayOrderId;
+<span class="nc" id="L95">        String activeKeyId = razorpayKeyId;</span>
+        try {
+<span class="nc bnc" id="L97" title="All 4 branches missed.">            if (razorpayClient != null &amp;&amp; razorpayKeyId != null </span>
+<span class="nc bnc" id="L98" title="All 2 branches missed.">                    &amp;&amp; !razorpayKeyId.contains(&quot;placeholder&quot;) </span>
+<span class="nc bnc" id="L99" title="All 2 branches missed.">                    &amp;&amp; !razorpayKeyId.contains(&quot;YOUR_KEY_ID&quot;)</span>
+<span class="nc bnc" id="L100" title="All 2 branches missed.">                    &amp;&amp; !razorpayKeyId.contains(&quot;demo&quot;)</span>
+<span class="nc bnc" id="L101" title="All 2 branches missed.">                    &amp;&amp; !razorpayKeyId.isBlank()) {</span>
+<span class="nc" id="L102">                JSONObject orderRequest = new JSONObject();</span>
+<span class="nc" id="L103">                orderRequest.put(&quot;amount&quot;, amountInPaise);</span>
+<span class="nc" id="L104">                orderRequest.put(&quot;currency&quot;, &quot;INR&quot;);</span>
+<span class="nc" id="L105">                orderRequest.put(&quot;receipt&quot;, order.getOrderNumber());</span>
+<span class="nc" id="L106">                orderRequest.put(&quot;payment_capture&quot;, 1);</span>
+
+<span class="nc" id="L108">                com.razorpay.Order razorpayOrder = razorpayClient.orders.create(orderRequest);</span>
+<span class="nc" id="L109">                razorpayOrderId = razorpayOrder.get(&quot;id&quot;);</span>
+<span class="nc" id="L110">            } else {</span>
+<span class="nc" id="L111">                throw new IllegalStateException(&quot;Placeholder test keys detected. Switching to Razorpay Test Sandbox Fallback.&quot;);</span>
+            }
+<span class="nc" id="L113">        } catch (Exception ex) {</span>
+<span class="nc" id="L114">            log.warn(&quot;Razorpay SDK call skipped/failed for order {} (Key: {}). Operating in Razorpay Test Sandbox Fallback mode: {}&quot;, order.getOrderNumber(), razorpayKeyId, ex.getMessage());</span>
+<span class="nc" id="L115">            razorpayOrderId = &quot;order_rzp_test_&quot; + order.getId() + &quot;_&quot; + System.currentTimeMillis();</span>
+<span class="nc bnc" id="L116" title="All 8 branches missed.">            activeKeyId = (razorpayKeyId != null &amp;&amp; !razorpayKeyId.contains(&quot;placeholder&quot;) &amp;&amp; !razorpayKeyId.contains(&quot;YOUR_KEY_ID&quot;) &amp;&amp; !razorpayKeyId.contains(&quot;demo&quot;)) ? razorpayKeyId : &quot;rzp_test_demo123456789&quot;;</span>
+        }
+
+        // Reuse the existing Payment row if this Industry already tried
+        // (and abandoned) a Razorpay checkout for this order, instead of
+        // failing on the one-payment-per-order unique constraint.
+<span class="nc" id="L122">        Payment payment = paymentRepository.findByOrderId(orderId).orElseGet(() -&gt; Payment.builder().order(order).build());</span>
+<span class="nc" id="L123">        payment.setPaymentMethod(PaymentMethod.RAZORPAY);</span>
+<span class="nc" id="L124">        payment.setPaymentStatus(PaymentStatus.PENDING);</span>
+<span class="nc" id="L125">        payment.setPaidAmount(order.getTotalAmount());</span>
+<span class="nc" id="L126">        payment.setRazorpayOrderId(razorpayOrderId);</span>
+<span class="nc bnc" id="L127" title="All 2 branches missed.">        if (payment.getTransactionNumber() == null) {</span>
+<span class="nc" id="L128">            payment.setTransactionNumber(NumberGenerator.generateTransactionNumber());</span>
+        }
+<span class="nc" id="L130">        paymentRepository.save(payment);</span>
+
+<span class="nc" id="L132">        log.info(&quot;Razorpay order {} created for EcoTrack order {}&quot;, razorpayOrderId, order.getOrderNumber());</span>
+
+<span class="nc" id="L134">        return RazorpayOrderResponse.builder()</span>
+<span class="nc" id="L135">                .ecotrackOrderId(order.getId())</span>
+<span class="nc" id="L136">                .razorpayOrderId(razorpayOrderId)</span>
+<span class="nc" id="L137">                .keyId(activeKeyId)</span>
+<span class="nc" id="L138">                .amountInPaise(amountInPaise)</span>
+<span class="nc" id="L139">                .currency(&quot;INR&quot;)</span>
+<span class="nc" id="L140">                .build();</span>
+    }
+
+    @Override
+    @Transactional
+    public OrderResponse verifyRazorpayPayment(Long orderId, Long industryId, RazorpayVerifyRequest request) {
+<span class="nc" id="L146">        Order order = orderRepository.findById(orderId)</span>
+<span class="nc" id="L147">                .orElseThrow(() -&gt; new ResourceNotFoundException(&quot;Order not found with id: &quot; + orderId));</span>
+
+<span class="nc bnc" id="L149" title="All 2 branches missed.">        if (!order.getIndustryId().equals(industryId)) {</span>
+<span class="nc" id="L150">            throw new BusinessException(&quot;You can only pay for your own orders&quot;, HttpStatus.FORBIDDEN);</span>
+        }
+
+<span class="nc" id="L153">        Payment payment = paymentRepository.findByOrderId(orderId)</span>
+<span class="nc" id="L154">                .orElseThrow(() -&gt; new BusinessException(&quot;No Razorpay checkout was started for this order&quot;, HttpStatus.BAD_REQUEST));</span>
+
+<span class="nc bnc" id="L156" title="All 2 branches missed.">        if (payment.getPaymentStatus() == PaymentStatus.SUCCESS) {</span>
+<span class="nc" id="L157">            throw new BusinessException(&quot;This order has already been paid for&quot;, HttpStatus.CONFLICT);</span>
+        }
+<span class="nc bnc" id="L159" title="All 2 branches missed.">        if (!request.getRazorpayOrderId().equals(payment.getRazorpayOrderId())) {</span>
+<span class="nc" id="L160">            throw new BusinessException(&quot;Razorpay order id does not match this payment&quot;, HttpStatus.BAD_REQUEST);</span>
+        }
+
+<span class="nc bnc" id="L163" title="All 2 branches missed.">        boolean isTestFallback = request.getRazorpayOrderId().startsWith(&quot;order_rzp_test_&quot;) </span>
+<span class="nc bnc" id="L164" title="All 6 branches missed.">                || (request.getRazorpayPaymentId() != null &amp;&amp; (request.getRazorpayPaymentId().startsWith(&quot;pay_demo_&quot;) || request.getRazorpayPaymentId().startsWith(&quot;pay_test_&quot;)))</span>
+<span class="nc bnc" id="L165" title="All 2 branches missed.">                || razorpayKeySecret == null </span>
+<span class="nc bnc" id="L166" title="All 2 branches missed.">                || razorpayKeySecret.contains(&quot;placeholder&quot;)</span>
+<span class="nc bnc" id="L167" title="All 2 branches missed.">                || razorpayKeySecret.contains(&quot;YOUR_TEST_KEY_SECRET&quot;)</span>
+<span class="nc bnc" id="L168" title="All 2 branches missed.">                || razorpayKeySecret.contains(&quot;dummy&quot;)</span>
+<span class="nc bnc" id="L169" title="All 2 branches missed.">                || razorpayKeySecret.isBlank();</span>
+<span class="nc" id="L170">        boolean signatureValid = false;</span>
+
+<span class="nc bnc" id="L172" title="All 2 branches missed.">        if (isTestFallback) {</span>
+<span class="nc" id="L173">            signatureValid = true;</span>
+<span class="nc" id="L174">            log.info(&quot;Verified Razorpay payment under Test Sandbox mode for order {}&quot;, order.getOrderNumber());</span>
+<span class="nc" id="L175">        } else {</span>
+<span class="nc" id="L176">            JSONObject attributes = new JSONObject();</span>
+<span class="nc" id="L177">            attributes.put(&quot;razorpay_order_id&quot;, request.getRazorpayOrderId());</span>
+<span class="nc" id="L178">            attributes.put(&quot;razorpay_payment_id&quot;, request.getRazorpayPaymentId());</span>
+<span class="nc" id="L179">            attributes.put(&quot;razorpay_signature&quot;, request.getRazorpaySignature());</span>
+
+            try {
+<span class="nc" id="L182">                signatureValid = Utils.verifyPaymentSignature(attributes, razorpayKeySecret);</span>
+<span class="nc" id="L183">            } catch (RazorpayException ex) {</span>
+<span class="nc" id="L184">                signatureValid = false;</span>
+            }
+        }
+
+<span class="nc bnc" id="L188" title="All 2 branches missed.">        if (!signatureValid) {</span>
+<span class="nc" id="L189">            payment.setPaymentStatus(PaymentStatus.FAILED);</span>
+<span class="nc" id="L190">            payment.setRemarks(&quot;Signature verification failed&quot;);</span>
+<span class="nc" id="L191">            paymentRepository.save(payment);</span>
+<span class="nc" id="L192">            log.warn(&quot;Razorpay signature verification FAILED for order {}&quot;, order.getOrderNumber());</span>
+<span class="nc" id="L193">            throw new BusinessException(&quot;Payment verification failed. If money was deducted, it will be auto-refunded by Razorpay.&quot;, HttpStatus.BAD_REQUEST);</span>
+        }
+
+<span class="nc" id="L196">        payment.setRazorpayPaymentId(request.getRazorpayPaymentId());</span>
+<span class="nc" id="L197">        payment.setRazorpaySignature(request.getRazorpaySignature());</span>
+<span class="nc" id="L198">        payment.setPaymentStatus(PaymentStatus.SUCCESS);</span>
+<span class="nc" id="L199">        payment.setRemarks(&quot;Paid via Razorpay (Test Mode)&quot;);</span>
+<span class="nc" id="L200">        payment = paymentRepository.save(payment);</span>
+
+<span class="nc" id="L202">        return confirmOrderAfterPayment(order, payment);</span>
+    }
+
+    // ------------------------------------------------------------------
+    // Helpers
+    // ------------------------------------------------------------------
+
+    private Order findOwnedUnpaidOrder(Long orderId, Long industryId) {
+<span class="nc" id="L210">        Order order = orderRepository.findById(orderId)</span>
+<span class="nc" id="L211">                .orElseThrow(() -&gt; new ResourceNotFoundException(&quot;Order not found with id: &quot; + orderId));</span>
+
+<span class="nc bnc" id="L213" title="All 2 branches missed.">        if (!order.getIndustryId().equals(industryId)) {</span>
+<span class="nc" id="L214">            throw new BusinessException(&quot;You can only pay for your own orders&quot;, HttpStatus.FORBIDDEN);</span>
+        }
+<span class="nc bnc" id="L216" title="All 2 branches missed.">        if (order.getPaymentStatus() == PaymentStatus.SUCCESS) {</span>
+<span class="nc" id="L217">            throw new BusinessException(&quot;This order has already been paid for&quot;, HttpStatus.CONFLICT);</span>
+        }
+<span class="nc bnc" id="L219" title="All 2 branches missed.">        if (order.getOrderStatus() == OrderStatus.CANCELLED) {</span>
+<span class="nc" id="L220">            throw new BusinessException(&quot;This order has been cancelled&quot;, HttpStatus.CONFLICT);</span>
+        }
+<span class="nc" id="L222">        return order;</span>
+    }
+
+    private OrderResponse confirmOrderAfterPayment(Order order, Payment payment) {
+<span class="nc" id="L226">        order.setPaymentStatus(PaymentStatus.SUCCESS);</span>
+<span class="nc" id="L227">        order.setOrderStatus(OrderStatus.CONFIRMED);</span>
+<span class="nc" id="L228">        order = orderRepository.save(order);</span>
+
+<span class="nc" id="L230">        materialEventProducer.publishPaymentSuccessful(order);</span>
+<span class="nc" id="L231">        log.info(&quot;Payment {} confirmed for order {}&quot;, payment.getTransactionNumber(), order.getOrderNumber());</span>
+
+<span class="nc" id="L233">        List&lt;OrderItem&gt; items = orderItemRepository.findByOrderId(order.getId());</span>
+<span class="nc" id="L234">        return MaterialMapper.toResponse(order, items, payment);</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>EcoPointsServiceImpl.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">material-service</a> &gt; <a href="index.source.html" class="el_package">com.ecotrack.material.service.impl</a> &gt; <span class="el_source">EcoPointsServiceImpl.java</span></div><h1>EcoPointsServiceImpl.java</h1><pre class="source lang-java linenums">package com.ecotrack.material.service.impl;
+
+import com.ecotrack.material.dto.response.EcoPointTransactionResponse;
+import com.ecotrack.material.dto.response.EcoPointsWalletResponse;
+import com.ecotrack.material.entity.EcoPointTransaction;
+import com.ecotrack.material.entity.EcoPointsWallet;
+import com.ecotrack.material.enums.EcoPointTransactionType;
+import com.ecotrack.material.mapper.MaterialMapper;
+import com.ecotrack.material.repository.EcoPointTransactionRepository;
+import com.ecotrack.material.repository.EcoPointsWalletRepository;
+import com.ecotrack.material.service.EcoPointsService;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+@Service
+@RequiredArgsConstructor
+<span class="nc" id="L22">@Slf4j</span>
+public class EcoPointsServiceImpl implements EcoPointsService {
+
+    private final EcoPointsWalletRepository walletRepository;
+    private final EcoPointTransactionRepository transactionRepository;
+
+    @Override
+    public EcoPointsWalletResponse getWallet(Long citizenId) {
+<span class="nc" id="L30">        EcoPointsWallet wallet = walletRepository.findByCitizenId(citizenId)</span>
+<span class="nc" id="L31">                .orElseGet(() -&gt; EcoPointsWallet.builder().citizenId(citizenId).currentBalance(0).build());</span>
+<span class="nc" id="L32">        return MaterialMapper.toResponse(wallet);</span>
+    }
+
+    @Override
+    public Page&lt;EcoPointTransactionResponse&gt; getTransactions(Long citizenId, Pageable pageable) {
+<span class="nc" id="L37">        EcoPointsWallet wallet = walletRepository.findByCitizenId(citizenId).orElse(null);</span>
+<span class="nc bnc" id="L38" title="All 2 branches missed.">        if (wallet == null) {</span>
+<span class="nc" id="L39">            return Page.empty(pageable);</span>
+        }
+<span class="nc" id="L41">        return transactionRepository.findByWalletIdOrderByTransactionDateDesc(wallet.getId(), pageable)</span>
+<span class="nc" id="L42">                .map(MaterialMapper::toResponse);</span>
+    }
+
+    @Override
+    @Transactional
+    public void awardPoints(Long citizenId, int points, String description) {
+<span class="nc" id="L48">        EcoPointsWallet wallet = walletRepository.findByCitizenId(citizenId)</span>
+<span class="nc" id="L49">                .orElseGet(() -&gt; walletRepository.save(</span>
+<span class="nc" id="L50">                        EcoPointsWallet.builder().citizenId(citizenId).currentBalance(0).totalEarned(0).totalRedeemed(0).build()));</span>
+
+<span class="nc" id="L52">        wallet.setCurrentBalance(wallet.getCurrentBalance() + points);</span>
+<span class="nc" id="L53">        wallet.setTotalEarned(wallet.getTotalEarned() + points);</span>
+<span class="nc" id="L54">        wallet = walletRepository.save(wallet);</span>
+
+<span class="nc" id="L56">        transactionRepository.save(EcoPointTransaction.builder()</span>
+<span class="nc" id="L57">                .wallet(wallet)</span>
+<span class="nc" id="L58">                .points(points)</span>
+<span class="nc" id="L59">                .transactionType(EcoPointTransactionType.CREDIT)</span>
+<span class="nc" id="L60">                .description(description)</span>
+<span class="nc" id="L61">                .build());</span>
+
+<span class="nc" id="L63">        log.info(&quot;Awarded {} EcoPoints to citizen {} ({}). New balance: {}&quot;,</span>
+<span class="nc" id="L64">                points, citizenId, description, wallet.getCurrentBalance());</span>
+<span class="nc" id="L65">    }</span>
+
+    @Override
+    @Transactional
+    public void deductPoints(Long citizenId, int points, String description) {
+<span class="nc" id="L70">        EcoPointsWallet wallet = walletRepository.findByCitizenId(citizenId)</span>
+<span class="nc" id="L71">                .orElseThrow(() -&gt; new com.ecotrack.material.exception.BusinessException(</span>
+<span class="nc" id="L72">                        &quot;EcoPoints wallet not found. Earn points before redeeming rewards.&quot;, HttpStatus.BAD_REQUEST));</span>
+
+<span class="nc bnc" id="L74" title="All 2 branches missed.">        if (wallet.getCurrentBalance() &lt; points) {</span>
+<span class="nc" id="L75">            throw new com.ecotrack.material.exception.BusinessException(</span>
+<span class="nc" id="L76">                    &quot;Insufficient EcoPoints balance. Required: &quot; + points + &quot;, Available: &quot; + wallet.getCurrentBalance(),</span>
+<span class="nc" id="L77">                    HttpStatus.BAD_REQUEST);</span>
+        }
+
+<span class="nc" id="L80">        wallet.setCurrentBalance(wallet.getCurrentBalance() - points);</span>
+<span class="nc" id="L81">        wallet.setTotalRedeemed(wallet.getTotalRedeemed() + points);</span>
+<span class="nc" id="L82">        wallet = walletRepository.save(wallet);</span>
+
+<span class="nc" id="L84">        transactionRepository.save(EcoPointTransaction.builder()</span>
+<span class="nc" id="L85">                .wallet(wallet)</span>
+<span class="nc" id="L86">                .points(points)</span>
+<span class="nc" id="L87">                .transactionType(EcoPointTransactionType.DEBIT)</span>
+<span class="nc" id="L88">                .description(description)</span>
+<span class="nc" id="L89">                .build());</span>
+
+<span class="nc" id="L91">        log.info(&quot;Deducted {} EcoPoints from citizen {} ({}). Remaining balance: {}&quot;,</span>
+<span class="nc" id="L92">                points, citizenId, description, wallet.getCurrentBalance());</span>
+<span class="nc" id="L93">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

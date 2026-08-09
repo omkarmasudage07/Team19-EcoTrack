@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>PickupEventConsumer.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">material-service</a> &gt; <a href="index.source.html" class="el_package">com.ecotrack.material.consumer</a> &gt; <span class="el_source">PickupEventConsumer.java</span></div><h1>PickupEventConsumer.java</h1><pre class="source lang-java linenums">package com.ecotrack.material.consumer;
+
+import com.ecotrack.material.constant.RabbitMQConstants;
+import com.ecotrack.material.event.PickupCompletedEvent;
+import com.ecotrack.material.service.EcoPointsService;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.amqp.rabbit.annotation.RabbitListener;
+import org.springframework.stereotype.Component;
+
+/**
+ * Listens for &quot;pickup.completed&quot; events published by Pickup Service. This
+ * is what actually implements the business rule &quot;Citizen receives
+ * EcoPoints after successful recycling&quot; - Pickup Service only announces
+ * completion, this service decides the reward and credits the wallet.
+ */
+@Component
+@RequiredArgsConstructor
+<span class="nc" id="L19">@Slf4j</span>
+public class PickupEventConsumer {
+
+    private final EcoPointsService ecoPointsService;
+    private final com.ecotrack.material.service.EcoPointRuleService ecoPointRuleService;
+
+    @RabbitListener(queues = RabbitMQConstants.QUEUE_MATERIAL_PICKUP_COMPLETED)
+    public void onPickupCompleted(PickupCompletedEvent event) {
+<span class="nc" id="L27">        log.info(&quot;Received pickup.completed event for pickup {}, category: {}&quot;,</span>
+<span class="nc" id="L28">                event.getPickupNumber(), event.getWasteCategoryName());</span>
+
+<span class="nc" id="L30">        int points = ecoPointRuleService.calculatePointsForCategory(event.getWasteCategoryName());</span>
+<span class="nc bnc" id="L31" title="All 4 branches missed.">        String categoryLabel = (event.getWasteCategoryName() != null &amp;&amp; !event.getWasteCategoryName().isBlank())</span>
+<span class="nc" id="L32">                ? event.getWasteCategoryName() : &quot;E-Waste&quot;;</span>
+
+<span class="nc" id="L34">        String description = &quot;Earned &quot; + points + &quot; EcoPoints for completed pickup #&quot; + event.getPickupNumber() + &quot; (&quot; + categoryLabel + &quot;)&quot;;</span>
+<span class="nc" id="L35">        ecoPointsService.awardPoints(event.getCitizenId(), points, description);</span>
+<span class="nc" id="L36">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

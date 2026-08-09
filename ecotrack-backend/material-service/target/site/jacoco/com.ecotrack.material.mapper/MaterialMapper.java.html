@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>MaterialMapper.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">material-service</a> &gt; <a href="index.source.html" class="el_package">com.ecotrack.material.mapper</a> &gt; <span class="el_source">MaterialMapper.java</span></div><h1>MaterialMapper.java</h1><pre class="source lang-java linenums">package com.ecotrack.material.mapper;
+
+import com.ecotrack.material.dto.response.*;
+import com.ecotrack.material.entity.*;
+
+import java.util.List;
+import java.util.stream.Collectors;
+
+public final class MaterialMapper {
+
+    private MaterialMapper() {
+    }
+
+    public static MaterialCategoryResponse toResponse(MaterialCategory category) {
+<span class="nc" id="L15">        return MaterialCategoryResponse.builder()</span>
+<span class="nc" id="L16">                .id(category.getId())</span>
+<span class="nc" id="L17">                .name(category.getName())</span>
+<span class="nc" id="L18">                .description(category.getDescription())</span>
+<span class="nc" id="L19">                .active(category.isActive())</span>
+<span class="nc" id="L20">                .build();</span>
+    }
+
+    public static MaterialResponse toResponse(Material material, List&lt;String&gt; imageUrls) {
+<span class="nc" id="L24">        return MaterialResponse.builder()</span>
+<span class="nc" id="L25">                .id(material.getId())</span>
+<span class="nc" id="L26">                .recyclerId(material.getRecyclerId())</span>
+<span class="nc" id="L27">                .categoryId(material.getCategory().getId())</span>
+<span class="nc" id="L28">                .categoryName(material.getCategory().getName())</span>
+<span class="nc" id="L29">                .materialName(material.getMaterialName())</span>
+<span class="nc" id="L30">                .description(material.getDescription())</span>
+<span class="nc" id="L31">                .purity(material.getPurity())</span>
+<span class="nc" id="L32">                .quantity(material.getQuantity())</span>
+<span class="nc" id="L33">                .unit(material.getUnit())</span>
+<span class="nc" id="L34">                .pricePerUnit(material.getPricePerUnit())</span>
+<span class="nc" id="L35">                .warehouseLocation(material.getWarehouseLocation())</span>
+<span class="nc" id="L36">                .availabilityStatus(material.getAvailabilityStatus())</span>
+<span class="nc" id="L37">                .imageUrls(imageUrls)</span>
+<span class="nc" id="L38">                .createdAt(material.getCreatedAt())</span>
+<span class="nc" id="L39">                .build();</span>
+    }
+
+    public static OrderItemResponse toResponse(OrderItem item) {
+<span class="nc" id="L43">        return OrderItemResponse.builder()</span>
+<span class="nc" id="L44">                .materialId(item.getMaterialId())</span>
+<span class="nc" id="L45">                .materialName(item.getMaterialName())</span>
+<span class="nc" id="L46">                .quantity(item.getQuantity())</span>
+<span class="nc" id="L47">                .price(item.getPrice())</span>
+<span class="nc" id="L48">                .subtotal(item.getSubtotal())</span>
+<span class="nc" id="L49">                .build();</span>
+    }
+
+    public static PaymentResponse toResponse(Payment payment) {
+<span class="nc" id="L53">        return PaymentResponse.builder()</span>
+<span class="nc" id="L54">                .transactionNumber(payment.getTransactionNumber())</span>
+<span class="nc" id="L55">                .paymentMethod(payment.getPaymentMethod())</span>
+<span class="nc" id="L56">                .paymentStatus(payment.getPaymentStatus())</span>
+<span class="nc" id="L57">                .paidAmount(payment.getPaidAmount())</span>
+<span class="nc" id="L58">                .paymentDate(payment.getPaymentDate())</span>
+<span class="nc" id="L59">                .remarks(payment.getRemarks())</span>
+<span class="nc" id="L60">                .build();</span>
+    }
+
+    public static OrderResponse toResponse(Order order, List&lt;OrderItem&gt; items, Payment payment) {
+<span class="nc" id="L64">        return OrderResponse.builder()</span>
+<span class="nc" id="L65">                .id(order.getId())</span>
+<span class="nc" id="L66">                .orderNumber(order.getOrderNumber())</span>
+<span class="nc" id="L67">                .industryId(order.getIndustryId())</span>
+<span class="nc" id="L68">                .recyclerId(order.getRecyclerId())</span>
+<span class="nc" id="L69">                .totalAmount(order.getTotalAmount())</span>
+<span class="nc" id="L70">                .paymentStatus(order.getPaymentStatus())</span>
+<span class="nc" id="L71">                .orderStatus(order.getOrderStatus())</span>
+<span class="nc" id="L72">                .items(items.stream().map(MaterialMapper::toResponse).collect(Collectors.toList()))</span>
+<span class="nc bnc" id="L73" title="All 2 branches missed.">                .payment(payment != null ? toResponse(payment) : null)</span>
+<span class="nc" id="L74">                .orderDate(order.getOrderDate())</span>
+<span class="nc" id="L75">                .updatedAt(order.getUpdatedAt())</span>
+<span class="nc" id="L76">                .build();</span>
+    }
+
+    public static EcoPointsWalletResponse toResponse(EcoPointsWallet wallet) {
+<span class="nc" id="L80">        return EcoPointsWalletResponse.builder()</span>
+<span class="nc" id="L81">                .citizenId(wallet.getCitizenId())</span>
+<span class="nc" id="L82">                .currentBalance(wallet.getCurrentBalance())</span>
+<span class="nc" id="L83">                .totalEarned(wallet.getTotalEarned())</span>
+<span class="nc" id="L84">                .totalRedeemed(wallet.getTotalRedeemed())</span>
+<span class="nc" id="L85">                .build();</span>
+    }
+
+    public static EcoPointTransactionResponse toResponse(EcoPointTransaction transaction) {
+<span class="nc" id="L89">        return EcoPointTransactionResponse.builder()</span>
+<span class="nc" id="L90">                .points(transaction.getPoints())</span>
+<span class="nc" id="L91">                .transactionType(transaction.getTransactionType())</span>
+<span class="nc" id="L92">                .description(transaction.getDescription())</span>
+<span class="nc" id="L93">                .transactionDate(transaction.getTransactionDate())</span>
+<span class="nc" id="L94">                .build();</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

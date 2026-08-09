@@ -1,0 +1,222 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>OrderServiceImpl.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">material-service</a> &gt; <a href="index.source.html" class="el_package">com.ecotrack.material.service.impl</a> &gt; <span class="el_source">OrderServiceImpl.java</span></div><h1>OrderServiceImpl.java</h1><pre class="source lang-java linenums">package com.ecotrack.material.service.impl;
+
+import com.ecotrack.material.dto.request.PlaceOrderRequest;
+import com.ecotrack.material.dto.request.UpdateOrderStatusRequest;
+import com.ecotrack.material.dto.response.OrderResponse;
+import com.ecotrack.material.entity.Material;
+import com.ecotrack.material.entity.Order;
+import com.ecotrack.material.entity.OrderItem;
+import com.ecotrack.material.entity.Payment;
+import com.ecotrack.material.enums.AvailabilityStatus;
+import com.ecotrack.material.enums.OrderStatus;
+import com.ecotrack.material.exception.BusinessException;
+import com.ecotrack.material.exception.ResourceNotFoundException;
+import com.ecotrack.material.mapper.MaterialMapper;
+import com.ecotrack.material.producer.MaterialEventProducer;
+import com.ecotrack.material.repository.MaterialRepository;
+import com.ecotrack.material.repository.OrderItemRepository;
+import com.ecotrack.material.repository.OrderRepository;
+import com.ecotrack.material.repository.PaymentRepository;
+import com.ecotrack.material.service.OrderService;
+import com.ecotrack.material.util.NumberGenerator;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.math.BigDecimal;
+import java.util.List;
+import java.util.Map;
+
+@Service
+@RequiredArgsConstructor
+<span class="nc" id="L36">@Slf4j</span>
+public class OrderServiceImpl implements OrderService {
+
+    private final OrderRepository orderRepository;
+    private final OrderItemRepository orderItemRepository;
+    private final MaterialRepository materialRepository;
+    private final PaymentRepository paymentRepository;
+    private final MaterialEventProducer materialEventProducer;
+
+    /** A paid order can only move forward one step at a time, same pattern as Pickup Service. */
+<span class="nc" id="L46">    private static final Map&lt;OrderStatus, OrderStatus&gt; NEXT_STATUS = Map.of(</span>
+<span class="nc" id="L47">            OrderStatus.CONFIRMED, OrderStatus.PROCESSING,</span>
+<span class="nc" id="L48">            OrderStatus.PROCESSING, OrderStatus.SHIPPED,</span>
+<span class="nc" id="L49">            OrderStatus.SHIPPED, OrderStatus.DELIVERED</span>
+<span class="nc" id="L50">    );</span>
+
+    @Override
+    @Transactional
+    public OrderResponse placeOrder(Long industryId, PlaceOrderRequest request) {
+<span class="nc" id="L55">        Long recyclerId = null;</span>
+<span class="nc" id="L56">        BigDecimal totalAmount = BigDecimal.ZERO;</span>
+
+<span class="nc" id="L58">        Order order = Order.builder()</span>
+<span class="nc" id="L59">                .orderNumber(NumberGenerator.generateOrderNumber())</span>
+<span class="nc" id="L60">                .industryId(industryId)</span>
+<span class="nc" id="L61">                .totalAmount(BigDecimal.ZERO) // set correctly below, after validating every item</span>
+<span class="nc" id="L62">                .paymentStatus(com.ecotrack.material.enums.PaymentStatus.PENDING)</span>
+<span class="nc" id="L63">                .orderStatus(OrderStatus.PLACED)</span>
+<span class="nc" id="L64">                .build();</span>
+
+<span class="nc bnc" id="L66" title="All 2 branches missed.">        for (PlaceOrderRequest.OrderItemRequest itemRequest : request.getItems()) {</span>
+<span class="nc" id="L67">            Material material = materialRepository.findById(itemRequest.getMaterialId())</span>
+<span class="nc" id="L68">                    .orElseThrow(() -&gt; new ResourceNotFoundException(</span>
+<span class="nc" id="L69">                            &quot;Material not found with id: &quot; + itemRequest.getMaterialId()));</span>
+
+<span class="nc bnc" id="L71" title="All 2 branches missed.">            if (recyclerId == null) {</span>
+<span class="nc" id="L72">                recyclerId = material.getRecyclerId();</span>
+<span class="nc bnc" id="L73" title="All 2 branches missed.">            } else if (!recyclerId.equals(material.getRecyclerId())) {</span>
+<span class="nc" id="L74">                throw new BusinessException(</span>
+<span class="nc" id="L75">                        &quot;All items in one order must come from the same Recycler. Please place separate orders.&quot;,</span>
+<span class="nc" id="L76">                        HttpStatus.BAD_REQUEST);</span>
+            }
+
+<span class="nc bnc" id="L79" title="All 2 branches missed.">            if (material.getAvailabilityStatus() != AvailabilityStatus.AVAILABLE) {</span>
+<span class="nc" id="L80">                throw new BusinessException(material.getMaterialName() + &quot; is currently out of stock&quot;, HttpStatus.CONFLICT);</span>
+            }
+<span class="nc bnc" id="L82" title="All 2 branches missed.">            if (material.getQuantity().compareTo(itemRequest.getQuantity()) &lt; 0) {</span>
+<span class="nc" id="L83">                throw new BusinessException(</span>
+<span class="nc" id="L84">                        &quot;Only &quot; + material.getQuantity() + &quot; &quot; + material.getUnit() + &quot; of &quot; +</span>
+<span class="nc" id="L85">                                material.getMaterialName() + &quot; is available&quot;, HttpStatus.CONFLICT);</span>
+            }
+
+<span class="nc" id="L88">            BigDecimal subtotal = material.getPricePerUnit().multiply(itemRequest.getQuantity());</span>
+<span class="nc" id="L89">            totalAmount = totalAmount.add(subtotal);</span>
+
+            // Reserve the stock immediately on order placement.
+<span class="nc" id="L92">            material.setQuantity(material.getQuantity().subtract(itemRequest.getQuantity()));</span>
+<span class="nc bnc" id="L93" title="All 2 branches missed.">            if (material.getQuantity().compareTo(BigDecimal.ZERO) &lt;= 0) {</span>
+<span class="nc" id="L94">                material.setAvailabilityStatus(AvailabilityStatus.OUT_OF_STOCK);</span>
+            }
+<span class="nc" id="L96">            materialRepository.save(material);</span>
+
+<span class="nc" id="L98">            order.setRecyclerId(recyclerId);</span>
+<span class="nc" id="L99">            order.setTotalAmount(totalAmount);</span>
+        }
+
+<span class="nc" id="L102">        order = orderRepository.save(order);</span>
+
+<span class="nc bnc" id="L104" title="All 2 branches missed.">        for (PlaceOrderRequest.OrderItemRequest itemRequest : request.getItems()) {</span>
+<span class="nc" id="L105">            Material material = materialRepository.findById(itemRequest.getMaterialId()).orElseThrow();</span>
+<span class="nc" id="L106">            orderItemRepository.save(OrderItem.builder()</span>
+<span class="nc" id="L107">                    .order(order)</span>
+<span class="nc" id="L108">                    .materialId(material.getId())</span>
+<span class="nc" id="L109">                    .materialName(material.getMaterialName())</span>
+<span class="nc" id="L110">                    .quantity(itemRequest.getQuantity())</span>
+<span class="nc" id="L111">                    .price(material.getPricePerUnit())</span>
+<span class="nc" id="L112">                    .subtotal(material.getPricePerUnit().multiply(itemRequest.getQuantity()))</span>
+<span class="nc" id="L113">                    .build());</span>
+        }
+
+<span class="nc" id="L116">        materialEventProducer.publishOrderPlaced(order);</span>
+<span class="nc" id="L117">        log.info(&quot;Order {} placed by industry {} for recycler {}&quot;, order.getOrderNumber(), industryId, recyclerId);</span>
+
+<span class="nc" id="L119">        return getOrderDetail(order.getId());</span>
+    }
+
+    @Override
+    public OrderResponse getOrderDetail(Long orderId) {
+<span class="nc" id="L124">        Order order = findOrderOrThrow(orderId);</span>
+<span class="nc" id="L125">        List&lt;OrderItem&gt; items = orderItemRepository.findByOrderId(orderId);</span>
+<span class="nc" id="L126">        Payment payment = paymentRepository.findByOrderId(orderId).orElse(null);</span>
+<span class="nc" id="L127">        return MaterialMapper.toResponse(order, items, payment);</span>
+    }
+
+    @Override
+    public Page&lt;OrderResponse&gt; getIndustryOrders(Long industryId, OrderStatus status, Pageable pageable) {
+<span class="nc bnc" id="L132" title="All 2 branches missed.">        Page&lt;Order&gt; orders = (status != null)</span>
+<span class="nc" id="L133">                ? orderRepository.findByIndustryIdAndOrderStatus(industryId, status, pageable)</span>
+<span class="nc" id="L134">                : orderRepository.findByIndustryId(industryId, pageable);</span>
+<span class="nc" id="L135">        return orders.map(order -&gt; MaterialMapper.toResponse(order, List.of(), null));</span>
+    }
+
+    @Override
+    public Page&lt;OrderResponse&gt; getRecyclerOrders(Long recyclerId, OrderStatus status, Pageable pageable) {
+<span class="nc bnc" id="L140" title="All 2 branches missed.">        Page&lt;Order&gt; orders = (status != null)</span>
+<span class="nc" id="L141">                ? orderRepository.findByRecyclerIdAndOrderStatus(recyclerId, status, pageable)</span>
+<span class="nc" id="L142">                : orderRepository.findByRecyclerId(recyclerId, pageable);</span>
+<span class="nc" id="L143">        return orders.map(order -&gt; MaterialMapper.toResponse(order, List.of(), null));</span>
+    }
+
+    @Override
+    public Page&lt;OrderResponse&gt; getAllOrders(OrderStatus status, Pageable pageable) {
+<span class="nc bnc" id="L148" title="All 2 branches missed.">        Page&lt;Order&gt; orders = (status != null)</span>
+<span class="nc" id="L149">                ? orderRepository.findByOrderStatus(status, pageable)</span>
+<span class="nc" id="L150">                : orderRepository.findAll(pageable);</span>
+<span class="nc" id="L151">        return orders.map(order -&gt; MaterialMapper.toResponse(order, List.of(), null));</span>
+    }
+
+    @Override
+    @Transactional
+    public OrderResponse updateOrderStatus(Long orderId, Long recyclerId, UpdateOrderStatusRequest request) {
+<span class="nc" id="L157">        Order order = findOrderOrThrow(orderId);</span>
+
+<span class="nc bnc" id="L159" title="All 2 branches missed.">        if (!recyclerId.equals(order.getRecyclerId())) {</span>
+<span class="nc" id="L160">            throw new BusinessException(&quot;This order does not belong to you&quot;, HttpStatus.FORBIDDEN);</span>
+        }
+
+<span class="nc" id="L163">        OrderStatus currentStatus = order.getOrderStatus();</span>
+<span class="nc" id="L164">        OrderStatus expectedNext = NEXT_STATUS.get(currentStatus);</span>
+
+<span class="nc bnc" id="L166" title="All 4 branches missed.">        if (expectedNext == null || expectedNext != request.getStatus()) {</span>
+<span class="nc" id="L167">            throw new BusinessException(</span>
+<span class="nc" id="L168">                    &quot;Invalid status transition: an order that is &quot; + currentStatus +</span>
+<span class="nc bnc" id="L169" title="All 2 branches missed.">                            &quot; can only move to &quot; + (expectedNext != null ? expectedNext : &quot;no further status&quot;),</span>
+<span class="nc" id="L170">                    HttpStatus.BAD_REQUEST);</span>
+        }
+
+<span class="nc" id="L173">        order.setOrderStatus(request.getStatus());</span>
+<span class="nc" id="L174">        order = orderRepository.save(order);</span>
+
+<span class="nc bnc" id="L176" title="All 2 branches missed.">        if (request.getStatus() == OrderStatus.SHIPPED) {</span>
+<span class="nc" id="L177">            materialEventProducer.publishOrderShipped(order);</span>
+<span class="nc bnc" id="L178" title="All 2 branches missed.">        } else if (request.getStatus() == OrderStatus.DELIVERED) {</span>
+<span class="nc" id="L179">            materialEventProducer.publishOrderDelivered(order);</span>
+        }
+
+<span class="nc" id="L182">        log.info(&quot;Order {} status changed {} -&gt; {}&quot;, order.getOrderNumber(), currentStatus, request.getStatus());</span>
+<span class="nc" id="L183">        return getOrderDetail(order.getId());</span>
+    }
+
+    @Override
+    @Transactional
+    public OrderResponse cancelOrder(Long orderId, Long industryId) {
+<span class="nc" id="L189">        Order order = findOrderOrThrow(orderId);</span>
+
+<span class="nc bnc" id="L191" title="All 2 branches missed.">        if (!order.getIndustryId().equals(industryId)) {</span>
+<span class="nc" id="L192">            throw new BusinessException(&quot;You can only cancel your own orders&quot;, HttpStatus.FORBIDDEN);</span>
+        }
+<span class="nc bnc" id="L194" title="All 4 branches missed.">        if (order.getOrderStatus() == OrderStatus.SHIPPED || order.getOrderStatus() == OrderStatus.DELIVERED) {</span>
+<span class="nc" id="L195">            throw new BusinessException(&quot;This order has already shipped and can no longer be cancelled&quot;, HttpStatus.CONFLICT);</span>
+        }
+<span class="nc bnc" id="L197" title="All 2 branches missed.">        if (order.getOrderStatus() == OrderStatus.CANCELLED) {</span>
+<span class="nc" id="L198">            throw new BusinessException(&quot;This order is already cancelled&quot;, HttpStatus.CONFLICT);</span>
+        }
+
+        // Release the reserved stock back to each Material.
+<span class="nc bnc" id="L202" title="All 2 branches missed.">        for (OrderItem item : orderItemRepository.findByOrderId(orderId)) {</span>
+<span class="nc" id="L203">            materialRepository.findById(item.getMaterialId()).ifPresent(material -&gt; {</span>
+<span class="nc" id="L204">                material.setQuantity(material.getQuantity().add(item.getQuantity()));</span>
+<span class="nc" id="L205">                material.setAvailabilityStatus(AvailabilityStatus.AVAILABLE);</span>
+<span class="nc" id="L206">                materialRepository.save(material);</span>
+<span class="nc" id="L207">            });</span>
+        }
+
+<span class="nc" id="L210">        order.setOrderStatus(OrderStatus.CANCELLED);</span>
+<span class="nc" id="L211">        order = orderRepository.save(order);</span>
+
+<span class="nc" id="L213">        log.info(&quot;Order {} cancelled by industry {}&quot;, order.getOrderNumber(), industryId);</span>
+<span class="nc" id="L214">        return getOrderDetail(order.getId());</span>
+    }
+
+    private Order findOrderOrThrow(Long orderId) {
+<span class="nc" id="L218">        return orderRepository.findById(orderId)</span>
+<span class="nc" id="L219">                .orElseThrow(() -&gt; new ResourceNotFoundException(&quot;Order not found with id: &quot; + orderId));</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

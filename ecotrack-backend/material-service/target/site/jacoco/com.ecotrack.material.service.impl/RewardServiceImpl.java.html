@@ -1,0 +1,276 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>RewardServiceImpl.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">material-service</a> &gt; <a href="index.source.html" class="el_package">com.ecotrack.material.service.impl</a> &gt; <span class="el_source">RewardServiceImpl.java</span></div><h1>RewardServiceImpl.java</h1><pre class="source lang-java linenums">package com.ecotrack.material.service.impl;
+
+import com.ecotrack.material.dto.request.CreateRewardRequest;
+import com.ecotrack.material.dto.request.RedeemRewardRequest;
+import com.ecotrack.material.dto.request.UpdateRewardRequest;
+import com.ecotrack.material.dto.response.RewardOrderResponse;
+import com.ecotrack.material.dto.response.RewardReportResponse;
+import com.ecotrack.material.dto.response.RewardResponse;
+import com.ecotrack.material.entity.EcoPointsWallet;
+import com.ecotrack.material.entity.Reward;
+import com.ecotrack.material.entity.RewardOrder;
+import com.ecotrack.material.enums.RewardCategory;
+import com.ecotrack.material.enums.RewardOrderStatus;
+import com.ecotrack.material.exception.BusinessException;
+import com.ecotrack.material.exception.ResourceNotFoundException;
+import com.ecotrack.material.producer.RewardEventProducer;
+import com.ecotrack.material.repository.EcoPointsWalletRepository;
+import com.ecotrack.material.repository.RewardOrderRepository;
+import com.ecotrack.material.repository.RewardRepository;
+import com.ecotrack.material.service.EcoPointsService;
+import com.ecotrack.material.service.RewardService;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
+@Service
+@RequiredArgsConstructor
+<span class="nc" id="L38">@Slf4j</span>
+public class RewardServiceImpl implements RewardService {
+
+    private final RewardRepository rewardRepository;
+    private final RewardOrderRepository rewardOrderRepository;
+    private final EcoPointsWalletRepository walletRepository;
+    private final EcoPointsService ecoPointsService;
+    private final RewardEventProducer rewardEventProducer;
+
+    @Override
+    public Page&lt;RewardResponse&gt; getRewards(Boolean active, RewardCategory category, boolean inStockOnly, String search, Pageable pageable) {
+<span class="nc bnc" id="L49" title="All 4 branches missed.">        String cleanSearch = (search != null &amp;&amp; !search.isBlank()) ? search.trim() : null;</span>
+<span class="nc" id="L50">        return rewardRepository.searchRewards(active, category, inStockOnly, cleanSearch, pageable)</span>
+<span class="nc" id="L51">                .map(this::toResponse);</span>
+    }
+
+    @Override
+    public RewardResponse getRewardById(Long id) {
+<span class="nc" id="L56">        Reward reward = findRewardOrThrow(id);</span>
+<span class="nc" id="L57">        return toResponse(reward);</span>
+    }
+
+    @Override
+    @Transactional
+    public RewardResponse createReward(CreateRewardRequest request) {
+<span class="nc" id="L63">        Reward reward = Reward.builder()</span>
+<span class="nc" id="L64">                .title(request.getTitle().trim())</span>
+<span class="nc" id="L65">                .description(request.getDescription())</span>
+<span class="nc" id="L66">                .category(request.getCategory())</span>
+<span class="nc" id="L67">                .pointsRequired(request.getPointsRequired())</span>
+<span class="nc" id="L68">                .stockQuantity(request.getStockQuantity())</span>
+<span class="nc" id="L69">                .imageUrl(request.getImageUrl())</span>
+<span class="nc bnc" id="L70" title="All 2 branches missed.">                .active(request.getActive() != null ? request.getActive() : true)</span>
+<span class="nc" id="L71">                .build();</span>
+
+<span class="nc" id="L73">        reward = rewardRepository.save(reward);</span>
+<span class="nc" id="L74">        log.info(&quot;Created reward item: {} ({} pts)&quot;, reward.getTitle(), reward.getPointsRequired());</span>
+<span class="nc" id="L75">        return toResponse(reward);</span>
+    }
+
+    @Override
+    @Transactional
+    public RewardResponse updateReward(Long id, UpdateRewardRequest request) {
+<span class="nc" id="L81">        Reward reward = findRewardOrThrow(id);</span>
+
+<span class="nc bnc" id="L83" title="All 4 branches missed.">        if (request.getTitle() != null &amp;&amp; !request.getTitle().isBlank()) reward.setTitle(request.getTitle().trim());</span>
+<span class="nc bnc" id="L84" title="All 2 branches missed.">        if (request.getDescription() != null) reward.setDescription(request.getDescription());</span>
+<span class="nc bnc" id="L85" title="All 2 branches missed.">        if (request.getCategory() != null) reward.setCategory(request.getCategory());</span>
+<span class="nc bnc" id="L86" title="All 2 branches missed.">        if (request.getPointsRequired() != null) reward.setPointsRequired(request.getPointsRequired());</span>
+<span class="nc bnc" id="L87" title="All 2 branches missed.">        if (request.getStockQuantity() != null) reward.setStockQuantity(request.getStockQuantity());</span>
+<span class="nc bnc" id="L88" title="All 2 branches missed.">        if (request.getImageUrl() != null) reward.setImageUrl(request.getImageUrl());</span>
+<span class="nc bnc" id="L89" title="All 2 branches missed.">        if (request.getActive() != null) reward.setActive(request.getActive());</span>
+
+<span class="nc" id="L91">        reward = rewardRepository.save(reward);</span>
+<span class="nc" id="L92">        log.info(&quot;Updated reward item id: {}&quot;, id);</span>
+<span class="nc" id="L93">        return toResponse(reward);</span>
+    }
+
+    @Override
+    @Transactional
+    public void deleteReward(Long id) {
+<span class="nc" id="L99">        Reward reward = findRewardOrThrow(id);</span>
+<span class="nc" id="L100">        rewardRepository.delete(reward);</span>
+<span class="nc" id="L101">        log.info(&quot;Deleted reward item id: {}&quot;, id);</span>
+<span class="nc" id="L102">    }</span>
+
+    @Override
+    @Transactional
+    public RewardResponse toggleActive(Long id) {
+<span class="nc" id="L107">        Reward reward = findRewardOrThrow(id);</span>
+<span class="nc bnc" id="L108" title="All 2 branches missed.">        reward.setActive(!reward.isActive());</span>
+<span class="nc" id="L109">        reward = rewardRepository.save(reward);</span>
+<span class="nc" id="L110">        log.info(&quot;Toggled active status of reward id {} to {}&quot;, id, reward.isActive());</span>
+<span class="nc" id="L111">        return toResponse(reward);</span>
+    }
+
+    @Override
+    @Transactional
+    public RewardOrderResponse redeemReward(Long citizenId, Long rewardId, RedeemRewardRequest request) {
+<span class="nc" id="L117">        Reward reward = findRewardOrThrow(rewardId);</span>
+
+<span class="nc bnc" id="L119" title="All 2 branches missed.">        if (!reward.isActive()) {</span>
+<span class="nc" id="L120">            throw new BusinessException(&quot;This reward is currently inactive and cannot be redeemed.&quot;, HttpStatus.BAD_REQUEST);</span>
+        }
+
+<span class="nc bnc" id="L123" title="All 2 branches missed.">        if (reward.getStockQuantity() &lt;= 0) {</span>
+<span class="nc" id="L124">            throw new BusinessException(&quot;Reward is out of stock.&quot;, HttpStatus.BAD_REQUEST);</span>
+        }
+
+        // Deduct points from wallet (validates available balance)
+<span class="nc" id="L128">        ecoPointsService.deductPoints(citizenId, reward.getPointsRequired(), &quot;Redeemed reward: &quot; + reward.getTitle());</span>
+
+        // Decrement stock
+<span class="nc" id="L131">        reward.setStockQuantity(reward.getStockQuantity() - 1);</span>
+<span class="nc" id="L132">        rewardRepository.save(reward);</span>
+
+        // Generate Order Number &amp; Voucher Code
+<span class="nc" id="L135">        String orderNumber = &quot;RWD-&quot; + System.currentTimeMillis() + &quot;-&quot; + (int) (Math.random() * 9000 + 1000);</span>
+<span class="nc" id="L136">        String voucherCode = null;</span>
+<span class="nc bnc" id="L137" title="All 2 branches missed.">        if (reward.getCategory() == RewardCategory.GIFT_CARD || </span>
+<span class="nc bnc" id="L138" title="All 2 branches missed.">            reward.getCategory() == RewardCategory.DISCOUNT_COUPON || </span>
+<span class="nc bnc" id="L139" title="All 2 branches missed.">            reward.getCategory() == RewardCategory.CERTIFICATE) {</span>
+<span class="nc" id="L140">            voucherCode = &quot;ECO-VO-&quot; + UUID.randomUUID().toString().substring(0, 8).toUpperCase();</span>
+        }
+
+<span class="nc bnc" id="L143" title="All 6 branches missed.">        String deliveryAddr = (request != null &amp;&amp; request.getDeliveryAddress() != null &amp;&amp; !request.getDeliveryAddress().isBlank())</span>
+<span class="nc" id="L144">                ? request.getDeliveryAddress() : &quot;Digital Fulfillment / Default Profile Address&quot;;</span>
+
+<span class="nc" id="L146">        RewardOrder order = RewardOrder.builder()</span>
+<span class="nc" id="L147">                .orderNumber(orderNumber)</span>
+<span class="nc" id="L148">                .citizenId(citizenId)</span>
+<span class="nc" id="L149">                .reward(reward)</span>
+<span class="nc" id="L150">                .rewardTitle(reward.getTitle())</span>
+<span class="nc" id="L151">                .pointsSpent(reward.getPointsRequired())</span>
+<span class="nc" id="L152">                .deliveryAddress(deliveryAddr)</span>
+<span class="nc" id="L153">                .voucherCode(voucherCode)</span>
+<span class="nc" id="L154">                .status(RewardOrderStatus.CONFIRMED)</span>
+<span class="nc" id="L155">                .build();</span>
+
+<span class="nc" id="L157">        order = rewardOrderRepository.save(order);</span>
+<span class="nc" id="L158">        log.info(&quot;Citizen {} successfully redeemed reward '{}' for {} points. Order #{}&quot;, </span>
+<span class="nc" id="L159">                citizenId, reward.getTitle(), reward.getPointsRequired(), order.getOrderNumber());</span>
+
+        // Publish RabbitMQ Event
+<span class="nc" id="L162">        rewardEventProducer.publishRewardRedeemed(order);</span>
+
+<span class="nc" id="L164">        return toResponse(order);</span>
+    }
+
+    @Override
+    public Page&lt;RewardOrderResponse&gt; getCitizenOrders(Long citizenId, Pageable pageable) {
+<span class="nc" id="L169">        return rewardOrderRepository.findByCitizenId(citizenId, pageable).map(this::toResponse);</span>
+    }
+
+    @Override
+    public Page&lt;RewardOrderResponse&gt; getAdminOrders(RewardOrderStatus status, Pageable pageable) {
+<span class="nc bnc" id="L174" title="All 2 branches missed.">        if (status != null) {</span>
+<span class="nc" id="L175">            return rewardOrderRepository.findByStatus(status, pageable).map(this::toResponse);</span>
+        }
+<span class="nc" id="L177">        return rewardOrderRepository.findAll(pageable).map(this::toResponse);</span>
+    }
+
+    @Override
+    @Transactional
+    public RewardOrderResponse updateOrderStatus(Long orderId, RewardOrderStatus status) {
+<span class="nc" id="L183">        RewardOrder order = rewardOrderRepository.findById(orderId)</span>
+<span class="nc" id="L184">                .orElseThrow(() -&gt; new ResourceNotFoundException(&quot;Reward Order not found with id: &quot; + orderId));</span>
+
+<span class="nc" id="L186">        order.setStatus(status);</span>
+<span class="nc" id="L187">        order = rewardOrderRepository.save(order);</span>
+<span class="nc" id="L188">        log.info(&quot;Updated status of Reward Order #{} to {}&quot;, order.getOrderNumber(), status);</span>
+<span class="nc" id="L189">        return toResponse(order);</span>
+    }
+
+    @Override
+    public RewardReportResponse getAdminReportStats() {
+<span class="nc" id="L194">        Long totalEarned = walletRepository.findAll().stream()</span>
+<span class="nc bnc" id="L195" title="All 2 branches missed.">                .mapToLong(w -&gt; w.getTotalEarned() != null ? w.getTotalEarned() : 0)</span>
+<span class="nc" id="L196">                .sum();</span>
+
+<span class="nc" id="L198">        Long totalRedeemed = walletRepository.findAll().stream()</span>
+<span class="nc bnc" id="L199" title="All 2 branches missed.">                .mapToLong(w -&gt; w.getTotalRedeemed() != null ? w.getTotalRedeemed() : 0)</span>
+<span class="nc" id="L200">                .sum();</span>
+
+<span class="nc" id="L202">        Long currentBalance = walletRepository.findAll().stream()</span>
+<span class="nc bnc" id="L203" title="All 2 branches missed.">                .mapToLong(w -&gt; w.getCurrentBalance() != null ? w.getCurrentBalance() : 0)</span>
+<span class="nc" id="L204">                .sum();</span>
+
+<span class="nc" id="L206">        long totalRewards = rewardRepository.count();</span>
+<span class="nc" id="L207">        long activeRewards = rewardRepository.countByActiveTrue();</span>
+<span class="nc" id="L208">        long totalOrders = rewardOrderRepository.count();</span>
+<span class="nc" id="L209">        long pendingOrders = rewardOrderRepository.countByStatus(RewardOrderStatus.PENDING);</span>
+<span class="nc" id="L210">        long confirmedOrders = rewardOrderRepository.countByStatus(RewardOrderStatus.CONFIRMED);</span>
+<span class="nc" id="L211">        long deliveredOrders = rewardOrderRepository.countByStatus(RewardOrderStatus.DELIVERED);</span>
+
+<span class="nc" id="L213">        List&lt;Object[]&gt; topRewardRows = rewardOrderRepository.findMostRedeemedRewards(PageRequest.of(0, 5));</span>
+<span class="nc" id="L214">        List&lt;RewardReportResponse.TopRewardStat&gt; topStats = new ArrayList&lt;&gt;();</span>
+<span class="nc" id="L215">        String mostRedeemed = &quot;N/A&quot;;</span>
+
+<span class="nc bnc" id="L217" title="All 2 branches missed.">        if (!topRewardRows.isEmpty()) {</span>
+<span class="nc" id="L218">            mostRedeemed = (String) topRewardRows.get(0)[0];</span>
+<span class="nc bnc" id="L219" title="All 2 branches missed.">            for (Object[] row : topRewardRows) {</span>
+<span class="nc" id="L220">                topStats.add(new RewardReportResponse.TopRewardStat((String) row[0], (Long) row[1]));</span>
+            }
+        }
+
+<span class="nc" id="L224">        return RewardReportResponse.builder()</span>
+<span class="nc" id="L225">                .totalPointsIssued(totalEarned)</span>
+<span class="nc" id="L226">                .totalPointsRedeemed(totalRedeemed)</span>
+<span class="nc" id="L227">                .currentSystemBalance(currentBalance)</span>
+<span class="nc" id="L228">                .totalRewardsCount(totalRewards)</span>
+<span class="nc" id="L229">                .activeRewardsCount(activeRewards)</span>
+<span class="nc" id="L230">                .totalOrdersCount(totalOrders)</span>
+<span class="nc" id="L231">                .pendingOrdersCount(pendingOrders)</span>
+<span class="nc" id="L232">                .confirmedOrdersCount(confirmedOrders)</span>
+<span class="nc" id="L233">                .deliveredOrdersCount(deliveredOrders)</span>
+<span class="nc" id="L234">                .mostRedeemedReward(mostRedeemed)</span>
+<span class="nc" id="L235">                .topRewards(topStats)</span>
+<span class="nc" id="L236">                .build();</span>
+    }
+
+    private Reward findRewardOrThrow(Long id) {
+<span class="nc" id="L240">        return rewardRepository.findById(id)</span>
+<span class="nc" id="L241">                .orElseThrow(() -&gt; new ResourceNotFoundException(&quot;Reward item not found with id: &quot; + id));</span>
+    }
+
+    private RewardResponse toResponse(Reward reward) {
+<span class="nc" id="L245">        return RewardResponse.builder()</span>
+<span class="nc" id="L246">                .id(reward.getId())</span>
+<span class="nc" id="L247">                .title(reward.getTitle())</span>
+<span class="nc" id="L248">                .description(reward.getDescription())</span>
+<span class="nc" id="L249">                .category(reward.getCategory())</span>
+<span class="nc" id="L250">                .pointsRequired(reward.getPointsRequired())</span>
+<span class="nc" id="L251">                .stockQuantity(reward.getStockQuantity())</span>
+<span class="nc" id="L252">                .imageUrl(reward.getImageUrl())</span>
+<span class="nc" id="L253">                .active(reward.isActive())</span>
+<span class="nc" id="L254">                .createdAt(reward.getCreatedAt())</span>
+<span class="nc" id="L255">                .updatedAt(reward.getUpdatedAt())</span>
+<span class="nc" id="L256">                .build();</span>
+    }
+
+    private RewardOrderResponse toResponse(RewardOrder order) {
+<span class="nc" id="L260">        return RewardOrderResponse.builder()</span>
+<span class="nc" id="L261">                .id(order.getId())</span>
+<span class="nc" id="L262">                .orderNumber(order.getOrderNumber())</span>
+<span class="nc" id="L263">                .citizenId(order.getCitizenId())</span>
+<span class="nc bnc" id="L264" title="All 2 branches missed.">                .rewardId(order.getReward() != null ? order.getReward().getId() : null)</span>
+<span class="nc" id="L265">                .rewardTitle(order.getRewardTitle())</span>
+<span class="nc bnc" id="L266" title="All 2 branches missed.">                .rewardCategory(order.getReward() != null ? order.getReward().getCategory() : null)</span>
+<span class="nc" id="L267">                .pointsSpent(order.getPointsSpent())</span>
+<span class="nc" id="L268">                .deliveryAddress(order.getDeliveryAddress())</span>
+<span class="nc" id="L269">                .voucherCode(order.getVoucherCode())</span>
+<span class="nc" id="L270">                .status(order.getStatus())</span>
+<span class="nc" id="L271">                .createdAt(order.getCreatedAt())</span>
+<span class="nc" id="L272">                .updatedAt(order.getUpdatedAt())</span>
+<span class="nc" id="L273">                .build();</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

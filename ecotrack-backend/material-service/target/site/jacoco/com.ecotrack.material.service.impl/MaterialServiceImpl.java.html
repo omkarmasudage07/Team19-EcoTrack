@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>MaterialServiceImpl.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">material-service</a> &gt; <a href="index.source.html" class="el_package">com.ecotrack.material.service.impl</a> &gt; <span class="el_source">MaterialServiceImpl.java</span></div><h1>MaterialServiceImpl.java</h1><pre class="source lang-java linenums">package com.ecotrack.material.service.impl;
+
+import com.ecotrack.material.dto.request.MaterialRequest;
+import com.ecotrack.material.dto.response.MaterialResponse;
+import com.ecotrack.material.entity.Material;
+import com.ecotrack.material.entity.MaterialCategory;
+import com.ecotrack.material.entity.MaterialImage;
+import com.ecotrack.material.enums.AvailabilityStatus;
+import com.ecotrack.material.exception.BusinessException;
+import com.ecotrack.material.exception.ResourceNotFoundException;
+import com.ecotrack.material.mapper.MaterialMapper;
+import com.ecotrack.material.repository.MaterialCategoryRepository;
+import com.ecotrack.material.repository.MaterialImageRepository;
+import com.ecotrack.material.repository.MaterialRepository;
+import com.ecotrack.material.service.MaterialService;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.math.BigDecimal;
+import java.util.Collections;
+import java.util.List;
+import java.util.stream.Collectors;
+
+@Service
+@RequiredArgsConstructor
+<span class="nc" id="L31">@Slf4j</span>
+public class MaterialServiceImpl implements MaterialService {
+
+    private final MaterialRepository materialRepository;
+    private final MaterialImageRepository materialImageRepository;
+    private final MaterialCategoryRepository categoryRepository;
+
+    @Override
+    @Transactional
+    public MaterialResponse createMaterial(Long recyclerId, MaterialRequest request) {
+<span class="nc" id="L41">        MaterialCategory category = categoryRepository.findById(request.getCategoryId())</span>
+<span class="nc" id="L42">                .orElseThrow(() -&gt; new ResourceNotFoundException(&quot;Material category not found&quot;));</span>
+
+<span class="nc" id="L44">        Material material = Material.builder()</span>
+<span class="nc" id="L45">                .recyclerId(recyclerId)</span>
+<span class="nc" id="L46">                .category(category)</span>
+<span class="nc" id="L47">                .materialName(request.getMaterialName())</span>
+<span class="nc" id="L48">                .description(request.getDescription())</span>
+<span class="nc" id="L49">                .purity(request.getPurity())</span>
+<span class="nc" id="L50">                .quantity(request.getQuantity())</span>
+<span class="nc" id="L51">                .unit(request.getUnit())</span>
+<span class="nc" id="L52">                .pricePerUnit(request.getPricePerUnit())</span>
+<span class="nc" id="L53">                .warehouseLocation(request.getWarehouseLocation())</span>
+<span class="nc" id="L54">                .availabilityStatus(resolveAvailability(request.getQuantity()))</span>
+<span class="nc" id="L55">                .build();</span>
+
+<span class="nc" id="L57">        material = materialRepository.save(material);</span>
+<span class="nc" id="L58">        saveImages(material, request.getImageUrls());</span>
+
+<span class="nc" id="L60">        log.info(&quot;Material '{}' listed by recycler {}&quot;, material.getMaterialName(), recyclerId);</span>
+<span class="nc" id="L61">        return getMaterialDetail(material.getId());</span>
+    }
+
+    @Override
+    @Transactional
+    public MaterialResponse updateMaterial(Long materialId, Long recyclerId, MaterialRequest request) {
+<span class="nc" id="L67">        Material material = findOwnedMaterialOrThrow(materialId, recyclerId);</span>
+
+<span class="nc" id="L69">        MaterialCategory category = categoryRepository.findById(request.getCategoryId())</span>
+<span class="nc" id="L70">                .orElseThrow(() -&gt; new ResourceNotFoundException(&quot;Material category not found&quot;));</span>
+
+<span class="nc" id="L72">        material.setCategory(category);</span>
+<span class="nc" id="L73">        material.setMaterialName(request.getMaterialName());</span>
+<span class="nc" id="L74">        material.setDescription(request.getDescription());</span>
+<span class="nc" id="L75">        material.setPurity(request.getPurity());</span>
+<span class="nc" id="L76">        material.setQuantity(request.getQuantity());</span>
+<span class="nc" id="L77">        material.setUnit(request.getUnit());</span>
+<span class="nc" id="L78">        material.setPricePerUnit(request.getPricePerUnit());</span>
+<span class="nc" id="L79">        material.setWarehouseLocation(request.getWarehouseLocation());</span>
+<span class="nc" id="L80">        material.setAvailabilityStatus(resolveAvailability(request.getQuantity()));</span>
+<span class="nc" id="L81">        material = materialRepository.save(material);</span>
+
+<span class="nc bnc" id="L83" title="All 2 branches missed.">        if (request.getImageUrls() != null) {</span>
+<span class="nc" id="L84">            materialImageRepository.deleteAll(materialImageRepository.findByMaterialId(materialId));</span>
+<span class="nc" id="L85">            saveImages(material, request.getImageUrls());</span>
+        }
+
+<span class="nc" id="L88">        return getMaterialDetail(material.getId());</span>
+    }
+
+    @Override
+    @Transactional
+    public void deleteMaterial(Long materialId, Long recyclerId) {
+<span class="nc" id="L94">        Material material = findOwnedMaterialOrThrow(materialId, recyclerId);</span>
+<span class="nc" id="L95">        materialImageRepository.deleteAll(materialImageRepository.findByMaterialId(materialId));</span>
+<span class="nc" id="L96">        materialRepository.delete(material);</span>
+<span class="nc" id="L97">        log.info(&quot;Material {} deleted by recycler {}&quot;, materialId, recyclerId);</span>
+<span class="nc" id="L98">    }</span>
+
+    @Override
+    public MaterialResponse getMaterialDetail(Long materialId) {
+<span class="nc" id="L102">        Material material = materialRepository.findById(materialId)</span>
+<span class="nc" id="L103">                .orElseThrow(() -&gt; new ResourceNotFoundException(&quot;Material not found with id: &quot; + materialId));</span>
+<span class="nc" id="L104">        List&lt;String&gt; imageUrls = materialImageRepository.findByMaterialId(materialId).stream()</span>
+<span class="nc" id="L105">                .map(MaterialImage::getImageUrl)</span>
+<span class="nc" id="L106">                .collect(Collectors.toList());</span>
+<span class="nc" id="L107">        return MaterialMapper.toResponse(material, imageUrls);</span>
+    }
+
+    @Override
+    public Page&lt;MaterialResponse&gt; getRecyclerMaterials(Long recyclerId, Pageable pageable) {
+<span class="nc" id="L112">        return materialRepository.findByRecyclerId(recyclerId, pageable)</span>
+<span class="nc" id="L113">                .map(material -&gt; MaterialMapper.toResponse(material, Collections.emptyList()));</span>
+    }
+
+    @Override
+    public Page&lt;MaterialResponse&gt; browseMarketplace(String materialName, Long categoryId, Pageable pageable) {
+        Page&lt;Material&gt; materials;
+<span class="nc bnc" id="L119" title="All 4 branches missed.">        if (materialName != null &amp;&amp; !materialName.isBlank()) {</span>
+<span class="nc" id="L120">            materials = materialRepository.findByMaterialNameContainingIgnoreCaseAndAvailabilityStatus(</span>
+<span class="nc" id="L121">                    materialName, AvailabilityStatus.AVAILABLE, pageable);</span>
+<span class="nc bnc" id="L122" title="All 2 branches missed.">        } else if (categoryId != null) {</span>
+<span class="nc" id="L123">            materials = materialRepository.findByCategoryIdAndAvailabilityStatus(</span>
+<span class="nc" id="L124">                    categoryId, AvailabilityStatus.AVAILABLE, pageable);</span>
+<span class="nc" id="L125">        } else {</span>
+<span class="nc" id="L126">            materials = materialRepository.findByAvailabilityStatus(AvailabilityStatus.AVAILABLE, pageable);</span>
+        }
+<span class="nc" id="L128">        return materials.map(material -&gt; MaterialMapper.toResponse(material, Collections.emptyList()));</span>
+    }
+
+    // ------------------------------------------------------------------
+    // Helpers
+    // ------------------------------------------------------------------
+
+    private Material findOwnedMaterialOrThrow(Long materialId, Long recyclerId) {
+<span class="nc" id="L136">        Material material = materialRepository.findById(materialId)</span>
+<span class="nc" id="L137">                .orElseThrow(() -&gt; new ResourceNotFoundException(&quot;Material not found with id: &quot; + materialId));</span>
+<span class="nc bnc" id="L138" title="All 2 branches missed.">        if (!material.getRecyclerId().equals(recyclerId)) {</span>
+<span class="nc" id="L139">            throw new BusinessException(&quot;You can only manage your own material listings&quot;, HttpStatus.FORBIDDEN);</span>
+        }
+<span class="nc" id="L141">        return material;</span>
+    }
+
+    private AvailabilityStatus resolveAvailability(BigDecimal quantity) {
+<span class="nc bnc" id="L145" title="All 2 branches missed.">        return quantity.compareTo(BigDecimal.ZERO) &gt; 0 ? AvailabilityStatus.AVAILABLE : AvailabilityStatus.OUT_OF_STOCK;</span>
+    }
+
+    private void saveImages(Material material, List&lt;String&gt; imageUrls) {
+<span class="nc bnc" id="L149" title="All 2 branches missed.">        if (imageUrls == null) {</span>
+<span class="nc" id="L150">            return;</span>
+        }
+<span class="nc bnc" id="L152" title="All 2 branches missed.">        for (String url : imageUrls) {</span>
+<span class="nc" id="L153">            materialImageRepository.save(MaterialImage.builder().material(material).imageUrl(url).build());</span>
+        }
+<span class="nc" id="L155">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

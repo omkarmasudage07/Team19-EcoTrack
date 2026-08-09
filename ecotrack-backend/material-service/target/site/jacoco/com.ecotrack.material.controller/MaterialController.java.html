@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>MaterialController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">material-service</a> &gt; <a href="index.source.html" class="el_package">com.ecotrack.material.controller</a> &gt; <span class="el_source">MaterialController.java</span></div><h1>MaterialController.java</h1><pre class="source lang-java linenums">package com.ecotrack.material.controller;
+
+import com.ecotrack.material.dto.request.MaterialRequest;
+import com.ecotrack.material.dto.response.ApiResponse;
+import com.ecotrack.material.dto.response.MaterialResponse;
+import com.ecotrack.material.security.AuthenticatedUser;
+import com.ecotrack.material.service.MaterialService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.*;
+
+@RestController
+@RequestMapping(&quot;/api/v1/materials&quot;)
+@RequiredArgsConstructor
+@Tag(name = &quot;Materials&quot;, description = &quot;Recycler material listings and the Industry marketplace&quot;)
+public class MaterialController {
+
+    private final MaterialService materialService;
+
+    @Operation(summary = &quot;[Recycler] List a new recovered material&quot;)
+    @PreAuthorize(&quot;hasRole('RECYCLER')&quot;)
+    @PostMapping
+    public ResponseEntity&lt;ApiResponse&lt;MaterialResponse&gt;&gt; create(
+            @AuthenticationPrincipal AuthenticatedUser user, @Valid @RequestBody MaterialRequest request) {
+<span class="nc" id="L33">        MaterialResponse response = materialService.createMaterial(user.getUserId(), request);</span>
+<span class="nc" id="L34">        return ResponseEntity.status(HttpStatus.CREATED)</span>
+<span class="nc" id="L35">                .body(ApiResponse.success(HttpStatus.CREATED.value(), &quot;Material listed successfully&quot;, response));</span>
+    }
+
+    @Operation(summary = &quot;[Recycler] Update one of my own material listings&quot;)
+    @PreAuthorize(&quot;hasRole('RECYCLER')&quot;)
+    @PutMapping(&quot;/{id}&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;MaterialResponse&gt;&gt; update(
+            @AuthenticationPrincipal AuthenticatedUser user,
+            @PathVariable Long id,
+            @Valid @RequestBody MaterialRequest request) {
+<span class="nc" id="L45">        MaterialResponse response = materialService.updateMaterial(id, user.getUserId(), request);</span>
+<span class="nc" id="L46">        return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK.value(), &quot;Material updated&quot;, response));</span>
+    }
+
+    @Operation(summary = &quot;[Recycler] Delete one of my own material listings&quot;)
+    @PreAuthorize(&quot;hasRole('RECYCLER')&quot;)
+    @DeleteMapping(&quot;/{id}&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;Void&gt;&gt; delete(
+            @AuthenticationPrincipal AuthenticatedUser user, @PathVariable Long id) {
+<span class="nc" id="L54">        materialService.deleteMaterial(id, user.getUserId());</span>
+<span class="nc" id="L55">        return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK.value(), &quot;Material deleted&quot;, null));</span>
+    }
+
+    @Operation(summary = &quot;[Recycler] View my own material inventory&quot;)
+    @PreAuthorize(&quot;hasRole('RECYCLER')&quot;)
+    @GetMapping(&quot;/my&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;Page&lt;MaterialResponse&gt;&gt;&gt; getMyMaterials(
+            @AuthenticationPrincipal AuthenticatedUser user, Pageable pageable) {
+<span class="nc" id="L63">        Page&lt;MaterialResponse&gt; response = materialService.getRecyclerMaterials(user.getUserId(), pageable);</span>
+<span class="nc" id="L64">        return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK.value(), &quot;Materials fetched&quot;, response));</span>
+    }
+
+    @Operation(summary = &quot;Browse the marketplace - search by name or filter by category&quot;)
+    @GetMapping
+    public ResponseEntity&lt;ApiResponse&lt;Page&lt;MaterialResponse&gt;&gt;&gt; browseMarketplace(
+            @RequestParam(required = false) String materialName,
+            @RequestParam(required = false) Long categoryId,
+            Pageable pageable) {
+<span class="nc" id="L73">        Page&lt;MaterialResponse&gt; response = materialService.browseMarketplace(materialName, categoryId, pageable);</span>
+<span class="nc" id="L74">        return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK.value(), &quot;Materials fetched&quot;, response));</span>
+    }
+
+    @Operation(summary = &quot;View full details of a single material listing&quot;)
+    @GetMapping(&quot;/{id}&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;MaterialResponse&gt;&gt; getDetail(@PathVariable Long id) {
+<span class="nc" id="L80">        MaterialResponse response = materialService.getMaterialDetail(id);</span>
+<span class="nc" id="L81">        return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK.value(), &quot;Material fetched&quot;, response));</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>
