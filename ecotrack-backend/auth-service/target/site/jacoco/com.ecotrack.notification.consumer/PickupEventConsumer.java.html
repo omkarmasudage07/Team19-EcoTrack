@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>PickupEventConsumer.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">notification-service</a> &gt; <a href="index.source.html" class="el_package">com.ecotrack.notification.consumer</a> &gt; <span class="el_source">PickupEventConsumer.java</span></div><h1>PickupEventConsumer.java</h1><pre class="source lang-java linenums">package com.ecotrack.notification.consumer;
+
+import com.ecotrack.notification.constant.RabbitMQConstants;
+import com.ecotrack.notification.enums.NotificationType;
+import com.ecotrack.notification.enums.RoleType;
+import com.ecotrack.notification.event.PickupEvent;
+import com.ecotrack.notification.service.NotificationService;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.amqp.rabbit.annotation.RabbitListener;
+import org.springframework.stereotype.Component;
+
+@Component
+@RequiredArgsConstructor
+<span class="nc" id="L15">@Slf4j</span>
+public class PickupEventConsumer {
+
+    private final NotificationService notificationService;
+
+    @RabbitListener(queues = RabbitMQConstants.QUEUE_PICKUP_ACCEPTED)
+    public void onPickupAccepted(PickupEvent event) {
+<span class="nc" id="L22">        notificationService.notify(</span>
+<span class="nc" id="L23">                event.getCitizenId(), RoleType.CITIZEN,</span>
+                &quot;Pickup Accepted&quot;,
+<span class="nc" id="L25">                &quot;Your pickup &quot; + event.getPickupNumber() + &quot; has been accepted by a Recycler.&quot;,</span>
+                NotificationType.PICKUP_ACCEPTED);
+
+<span class="nc bnc" id="L28" title="All 2 branches missed.">        if (event.getRecyclerId() != null) {</span>
+<span class="nc" id="L29">            notificationService.notify(</span>
+<span class="nc" id="L30">                    event.getRecyclerId(), RoleType.RECYCLER,</span>
+                    &quot;New Pickup Assigned&quot;,
+<span class="nc" id="L32">                    &quot;You accepted pickup &quot; + event.getPickupNumber() + &quot;.&quot;,</span>
+                    NotificationType.PICKUP_ACCEPTED);
+        }
+
+<span class="nc" id="L36">        notificationService.logAudit(&quot;PICKUP_ACCEPTED&quot;, &quot;Pickup &quot; + event.getPickupNumber() + &quot; accepted&quot;);</span>
+<span class="nc" id="L37">    }</span>
+
+    @RabbitListener(queues = RabbitMQConstants.QUEUE_PICKUP_COMPLETED)
+    public void onPickupCompleted(PickupEvent event) {
+<span class="nc" id="L41">        notificationService.notify(</span>
+<span class="nc" id="L42">                event.getCitizenId(), RoleType.CITIZEN,</span>
+                &quot;Pickup Completed&quot;,
+<span class="nc" id="L44">                &quot;Your pickup &quot; + event.getPickupNumber() + &quot; is complete. EcoPoints have been added to your wallet!&quot;,</span>
+                NotificationType.PICKUP_COMPLETED);
+
+<span class="nc" id="L47">        notificationService.logAudit(&quot;PICKUP_COMPLETED&quot;, &quot;Pickup &quot; + event.getPickupNumber() + &quot; completed&quot;);</span>
+<span class="nc" id="L48">    }</span>
+
+    @RabbitListener(queues = RabbitMQConstants.QUEUE_PICKUP_CANCELLED)
+    public void onPickupCancelled(PickupEvent event) {
+<span class="nc" id="L52">        notificationService.notify(</span>
+<span class="nc" id="L53">                event.getCitizenId(), RoleType.CITIZEN,</span>
+                &quot;Pickup Cancelled&quot;,
+<span class="nc" id="L55">                &quot;Your pickup &quot; + event.getPickupNumber() + &quot; has been cancelled.&quot;,</span>
+                NotificationType.PICKUP_CANCELLED);
+
+<span class="nc" id="L58">        notificationService.logAudit(&quot;PICKUP_CANCELLED&quot;, &quot;Pickup &quot; + event.getPickupNumber() + &quot; cancelled&quot;);</span>
+<span class="nc" id="L59">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>
