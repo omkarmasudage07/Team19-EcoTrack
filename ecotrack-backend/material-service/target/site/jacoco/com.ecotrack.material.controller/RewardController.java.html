@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>RewardController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">material-service</a> &gt; <a href="index.source.html" class="el_package">com.ecotrack.material.controller</a> &gt; <span class="el_source">RewardController.java</span></div><h1>RewardController.java</h1><pre class="source lang-java linenums">package com.ecotrack.material.controller;
+
+import com.ecotrack.material.dto.request.CreateRewardRequest;
+import com.ecotrack.material.dto.request.RedeemRewardRequest;
+import com.ecotrack.material.dto.request.UpdateRewardRequest;
+import com.ecotrack.material.dto.response.*;
+import com.ecotrack.material.enums.RewardCategory;
+import com.ecotrack.material.enums.RewardOrderStatus;
+import com.ecotrack.material.security.AuthenticatedUser;
+import com.ecotrack.material.service.RewardService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.*;
+
+@RestController
+@RequestMapping(&quot;/api/v1/rewards&quot;)
+@RequiredArgsConstructor
+@Tag(name = &quot;Rewards Marketplace&quot;, description = &quot;Citizen rewards catalog, point redemptions, and Admin rewards management&quot;)
+public class RewardController {
+
+    private final RewardService rewardService;
+
+    @Operation(summary = &quot;Browse rewards catalog&quot;)
+    @GetMapping
+    public ResponseEntity&lt;ApiResponse&lt;Page&lt;RewardResponse&gt;&gt;&gt; getRewards(
+            @RequestParam(required = false) Boolean active,
+            @RequestParam(required = false) RewardCategory category,
+            @RequestParam(defaultValue = &quot;false&quot;) boolean inStockOnly,
+            @RequestParam(required = false) String search,
+            Pageable pageable) {
+<span class="nc" id="L39">        Page&lt;RewardResponse&gt; response = rewardService.getRewards(active, category, inStockOnly, search, pageable);</span>
+<span class="nc" id="L40">        return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK.value(), &quot;Rewards catalog fetched&quot;, response));</span>
+    }
+
+    @Operation(summary = &quot;Get reward item detail by ID&quot;)
+    @GetMapping(&quot;/{id}&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;RewardResponse&gt;&gt; getRewardById(@PathVariable Long id) {
+<span class="nc" id="L46">        RewardResponse response = rewardService.getRewardById(id);</span>
+<span class="nc" id="L47">        return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK.value(), &quot;Reward item fetched&quot;, response));</span>
+    }
+
+    @Operation(summary = &quot;[Admin] Create new reward item&quot;)
+    @PreAuthorize(&quot;hasRole('ADMIN')&quot;)
+    @PostMapping
+    public ResponseEntity&lt;ApiResponse&lt;RewardResponse&gt;&gt; createReward(@Valid @RequestBody CreateRewardRequest request) {
+<span class="nc" id="L54">        RewardResponse response = rewardService.createReward(request);</span>
+<span class="nc" id="L55">        return ResponseEntity.status(HttpStatus.CREATED)</span>
+<span class="nc" id="L56">                .body(ApiResponse.success(HttpStatus.CREATED.value(), &quot;Reward created successfully&quot;, response));</span>
+    }
+
+    @Operation(summary = &quot;[Admin] Update reward item&quot;)
+    @PreAuthorize(&quot;hasRole('ADMIN')&quot;)
+    @PutMapping(&quot;/{id}&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;RewardResponse&gt;&gt; updateReward(
+            @PathVariable Long id, @Valid @RequestBody UpdateRewardRequest request) {
+<span class="nc" id="L64">        RewardResponse response = rewardService.updateReward(id, request);</span>
+<span class="nc" id="L65">        return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK.value(), &quot;Reward updated successfully&quot;, response));</span>
+    }
+
+    @Operation(summary = &quot;[Admin] Delete reward item&quot;)
+    @PreAuthorize(&quot;hasRole('ADMIN')&quot;)
+    @DeleteMapping(&quot;/{id}&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;Void&gt;&gt; deleteReward(@PathVariable Long id) {
+<span class="nc" id="L72">        rewardService.deleteReward(id);</span>
+<span class="nc" id="L73">        return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK.value(), &quot;Reward deleted successfully&quot;, null));</span>
+    }
+
+    @Operation(summary = &quot;[Admin] Toggle active/inactive status&quot;)
+    @PreAuthorize(&quot;hasRole('ADMIN')&quot;)
+    @PatchMapping(&quot;/{id}/toggle-active&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;RewardResponse&gt;&gt; toggleActive(@PathVariable Long id) {
+<span class="nc" id="L80">        RewardResponse response = rewardService.toggleActive(id);</span>
+<span class="nc" id="L81">        return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK.value(), &quot;Reward status updated&quot;, response));</span>
+    }
+
+    @Operation(summary = &quot;[Citizen] Redeem reward using EcoPoints&quot;)
+    @PreAuthorize(&quot;hasRole('CITIZEN')&quot;)
+    @PostMapping(&quot;/{id}/redeem&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;RewardOrderResponse&gt;&gt; redeemReward(
+            @AuthenticationPrincipal AuthenticatedUser user,
+            @PathVariable Long id,
+            @RequestBody(required = false) RedeemRewardRequest request) {
+<span class="nc" id="L91">        RewardOrderResponse response = rewardService.redeemReward(user.getUserId(), id, request);</span>
+<span class="nc" id="L92">        return ResponseEntity.status(HttpStatus.CREATED)</span>
+<span class="nc" id="L93">                .body(ApiResponse.success(HttpStatus.CREATED.value(), &quot;Reward redeemed successfully!&quot;, response));</span>
+    }
+
+    @Operation(summary = &quot;[Citizen] View my reward redemption order history&quot;)
+    @PreAuthorize(&quot;hasRole('CITIZEN')&quot;)
+    @GetMapping(&quot;/my-orders&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;Page&lt;RewardOrderResponse&gt;&gt;&gt; getMyOrders(
+            @AuthenticationPrincipal AuthenticatedUser user, Pageable pageable) {
+<span class="nc" id="L101">        Page&lt;RewardOrderResponse&gt; response = rewardService.getCitizenOrders(user.getUserId(), pageable);</span>
+<span class="nc" id="L102">        return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK.value(), &quot;My reward orders fetched&quot;, response));</span>
+    }
+
+    @Operation(summary = &quot;[Admin] View all citizen reward orders&quot;)
+    @PreAuthorize(&quot;hasRole('ADMIN')&quot;)
+    @GetMapping(&quot;/admin/orders&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;Page&lt;RewardOrderResponse&gt;&gt;&gt; getAdminOrders(
+            @RequestParam(required = false) RewardOrderStatus status, Pageable pageable) {
+<span class="nc" id="L110">        Page&lt;RewardOrderResponse&gt; response = rewardService.getAdminOrders(status, pageable);</span>
+<span class="nc" id="L111">        return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK.value(), &quot;Admin reward orders fetched&quot;, response));</span>
+    }
+
+    @Operation(summary = &quot;[Admin] Update reward order status&quot;)
+    @PreAuthorize(&quot;hasRole('ADMIN')&quot;)
+    @PutMapping(&quot;/admin/orders/{id}/status&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;RewardOrderResponse&gt;&gt; updateOrderStatus(
+            @PathVariable Long id, @RequestParam RewardOrderStatus status) {
+<span class="nc" id="L119">        RewardOrderResponse response = rewardService.updateOrderStatus(id, status);</span>
+<span class="nc" id="L120">        return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK.value(), &quot;Reward order status updated&quot;, response));</span>
+    }
+
+    @Operation(summary = &quot;[Admin] Get EcoPoints &amp; Reward analytics reports&quot;)
+    @PreAuthorize(&quot;hasRole('ADMIN')&quot;)
+    @GetMapping(&quot;/admin/reports&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;RewardReportResponse&gt;&gt; getAdminReports() {
+<span class="nc" id="L127">        RewardReportResponse response = rewardService.getAdminReportStats();</span>
+<span class="nc" id="L128">        return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK.value(), &quot;Reward report stats fetched&quot;, response));</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

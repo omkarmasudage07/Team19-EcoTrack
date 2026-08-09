@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>EcoPointRuleServiceImpl.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">material-service</a> &gt; <a href="index.source.html" class="el_package">com.ecotrack.material.service.impl</a> &gt; <span class="el_source">EcoPointRuleServiceImpl.java</span></div><h1>EcoPointRuleServiceImpl.java</h1><pre class="source lang-java linenums">package com.ecotrack.material.service.impl;
+
+import com.ecotrack.material.dto.request.EcoPointRuleRequest;
+import com.ecotrack.material.dto.response.EcoPointRuleResponse;
+import com.ecotrack.material.entity.EcoPointRule;
+import com.ecotrack.material.exception.BusinessException;
+import com.ecotrack.material.exception.ResourceNotFoundException;
+import com.ecotrack.material.repository.EcoPointRuleRepository;
+import com.ecotrack.material.service.EcoPointRuleService;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+import java.util.stream.Collectors;
+
+@Service
+@RequiredArgsConstructor
+<span class="nc" id="L21">@Slf4j</span>
+public class EcoPointRuleServiceImpl implements EcoPointRuleService {
+
+    private final EcoPointRuleRepository ruleRepository;
+
+    @Override
+    public List&lt;EcoPointRuleResponse&gt; getAllRules() {
+<span class="nc" id="L28">        return ruleRepository.findAll().stream()</span>
+<span class="nc" id="L29">                .map(this::toResponse)</span>
+<span class="nc" id="L30">                .collect(Collectors.toList());</span>
+    }
+
+    @Override
+    public EcoPointRuleResponse getRuleById(Long id) {
+<span class="nc" id="L35">        EcoPointRule rule = ruleRepository.findById(id)</span>
+<span class="nc" id="L36">                .orElseThrow(() -&gt; new ResourceNotFoundException(&quot;EcoPoint Rule not found with id: &quot; + id));</span>
+<span class="nc" id="L37">        return toResponse(rule);</span>
+    }
+
+    @Override
+    public EcoPointRuleResponse getRuleByCategory(String categoryName) {
+<span class="nc" id="L42">        EcoPointRule rule = ruleRepository.findByCategoryNameIgnoreCase(categoryName)</span>
+<span class="nc" id="L43">                .orElseThrow(() -&gt; new ResourceNotFoundException(&quot;EcoPoint Rule not found for category: &quot; + categoryName));</span>
+<span class="nc" id="L44">        return toResponse(rule);</span>
+    }
+
+    @Override
+    @Transactional
+    public EcoPointRuleResponse createRule(EcoPointRuleRequest request) {
+<span class="nc" id="L50">        ruleRepository.findByCategoryNameIgnoreCase(request.getCategoryName())</span>
+<span class="nc" id="L51">                .ifPresent(existing -&gt; {</span>
+<span class="nc" id="L52">                    throw new BusinessException(&quot;EcoPoint Rule for category '&quot; + request.getCategoryName() + &quot;' already exists&quot;, HttpStatus.CONFLICT);</span>
+                });
+
+<span class="nc" id="L55">        EcoPointRule rule = EcoPointRule.builder()</span>
+<span class="nc" id="L56">                .categoryName(request.getCategoryName().trim())</span>
+<span class="nc" id="L57">                .pointsPerUnit(request.getPointsPerUnit())</span>
+<span class="nc bnc" id="L58" title="All 2 branches missed.">                .ruleType(request.getRuleType() != null ? request.getRuleType() : &quot;FLAT&quot;)</span>
+<span class="nc" id="L59">                .description(request.getDescription())</span>
+<span class="nc bnc" id="L60" title="All 2 branches missed.">                .active(request.getActive() != null ? request.getActive() : true)</span>
+<span class="nc" id="L61">                .build();</span>
+
+<span class="nc" id="L63">        rule = ruleRepository.save(rule);</span>
+<span class="nc" id="L64">        log.info(&quot;Created EcoPoint Rule for category {} with {} points&quot;, rule.getCategoryName(), rule.getPointsPerUnit());</span>
+<span class="nc" id="L65">        return toResponse(rule);</span>
+    }
+
+    @Override
+    @Transactional
+    public EcoPointRuleResponse updateRule(Long id, EcoPointRuleRequest request) {
+<span class="nc" id="L71">        EcoPointRule rule = ruleRepository.findById(id)</span>
+<span class="nc" id="L72">                .orElseThrow(() -&gt; new ResourceNotFoundException(&quot;EcoPoint Rule not found with id: &quot; + id));</span>
+
+<span class="nc" id="L74">        rule.setPointsPerUnit(request.getPointsPerUnit());</span>
+<span class="nc bnc" id="L75" title="All 2 branches missed.">        if (request.getRuleType() != null) rule.setRuleType(request.getRuleType());</span>
+<span class="nc bnc" id="L76" title="All 2 branches missed.">        if (request.getDescription() != null) rule.setDescription(request.getDescription());</span>
+<span class="nc bnc" id="L77" title="All 2 branches missed.">        if (request.getActive() != null) rule.setActive(request.getActive());</span>
+
+<span class="nc" id="L79">        rule = ruleRepository.save(rule);</span>
+<span class="nc" id="L80">        log.info(&quot;Updated EcoPoint Rule id {} for category {}: {} points&quot;, id, rule.getCategoryName(), rule.getPointsPerUnit());</span>
+<span class="nc" id="L81">        return toResponse(rule);</span>
+    }
+
+    @Override
+    @Transactional
+    public void deleteRule(Long id) {
+<span class="nc" id="L87">        EcoPointRule rule = ruleRepository.findById(id)</span>
+<span class="nc" id="L88">                .orElseThrow(() -&gt; new ResourceNotFoundException(&quot;EcoPoint Rule not found with id: &quot; + id));</span>
+<span class="nc" id="L89">        ruleRepository.delete(rule);</span>
+<span class="nc" id="L90">        log.info(&quot;Deleted EcoPoint Rule id {}&quot;, id);</span>
+<span class="nc" id="L91">    }</span>
+
+    @Override
+    public int calculatePointsForCategory(String categoryName) {
+<span class="nc bnc" id="L95" title="All 4 branches missed.">        if (categoryName == null || categoryName.isBlank()) {</span>
+<span class="nc" id="L96">            return 50; // default fallback points</span>
+        }
+<span class="nc" id="L98">        return ruleRepository.findByCategoryNameIgnoreCase(categoryName.trim())</span>
+<span class="nc" id="L99">                .filter(EcoPointRule::isActive)</span>
+<span class="nc" id="L100">                .map(EcoPointRule::getPointsPerUnit)</span>
+<span class="nc" id="L101">                .orElse(50);</span>
+    }
+
+    private EcoPointRuleResponse toResponse(EcoPointRule rule) {
+<span class="nc" id="L105">        return EcoPointRuleResponse.builder()</span>
+<span class="nc" id="L106">                .id(rule.getId())</span>
+<span class="nc" id="L107">                .categoryName(rule.getCategoryName())</span>
+<span class="nc" id="L108">                .pointsPerUnit(rule.getPointsPerUnit())</span>
+<span class="nc" id="L109">                .ruleType(rule.getRuleType())</span>
+<span class="nc" id="L110">                .description(rule.getDescription())</span>
+<span class="nc" id="L111">                .active(rule.isActive())</span>
+<span class="nc" id="L112">                .createdAt(rule.getCreatedAt())</span>
+<span class="nc" id="L113">                .updatedAt(rule.getUpdatedAt())</span>
+<span class="nc" id="L114">                .build();</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

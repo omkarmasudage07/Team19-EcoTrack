@@ -1,0 +1,4 @@
+com\ecotrack\material\service\OrderServiceImplTest.class
+com\ecotrack\material\service\RewardServiceImplTest.class
+com\ecotrack\material\service\EcoPointsServiceImplTest.class
+com\ecotrack\material\service\impl\PaymentServiceImplTest.class

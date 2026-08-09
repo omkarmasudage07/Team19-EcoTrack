@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>RewardSeeder.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">material-service</a> &gt; <a href="index.source.html" class="el_package">com.ecotrack.material.config</a> &gt; <span class="el_source">RewardSeeder.java</span></div><h1>RewardSeeder.java</h1><pre class="source lang-java linenums">package com.ecotrack.material.config;
+
+import com.ecotrack.material.entity.EcoPointRule;
+import com.ecotrack.material.entity.Reward;
+import com.ecotrack.material.enums.RewardCategory;
+import com.ecotrack.material.repository.EcoPointRuleRepository;
+import com.ecotrack.material.repository.RewardRepository;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.CommandLineRunner;
+import org.springframework.stereotype.Component;
+
+import java.util.List;
+
+@Component
+@RequiredArgsConstructor
+<span class="nc" id="L17">@Slf4j</span>
+public class RewardSeeder implements CommandLineRunner {
+
+    private final RewardRepository rewardRepository;
+    private final EcoPointRuleRepository ruleRepository;
+
+    @Override
+    public void run(String... args) {
+<span class="nc" id="L25">        seedEcoPointRules();</span>
+<span class="nc" id="L26">        seedRewards();</span>
+<span class="nc" id="L27">    }</span>
+
+    private void seedEcoPointRules() {
+<span class="nc bnc" id="L30" title="All 2 branches missed.">        if (ruleRepository.count() &gt; 0) {</span>
+<span class="nc" id="L31">            return;</span>
+        }
+
+<span class="nc" id="L34">        log.info(&quot;Seeding default EcoPoint Rules per waste category...&quot;);</span>
+<span class="nc" id="L35">        List&lt;EcoPointRule&gt; rules = List.of(</span>
+<span class="nc" id="L36">                EcoPointRule.builder().categoryName(&quot;Mobile Phones&quot;).pointsPerUnit(100).ruleType(&quot;FLAT&quot;).description(&quot;100 points per recycled phone&quot;).active(true).build(),</span>
+<span class="nc" id="L37">                EcoPointRule.builder().categoryName(&quot;Laptops&quot;).pointsPerUnit(250).ruleType(&quot;FLAT&quot;).description(&quot;250 points per recycled laptop&quot;).active(true).build(),</span>
+<span class="nc" id="L38">                EcoPointRule.builder().categoryName(&quot;Batteries&quot;).pointsPerUnit(50).ruleType(&quot;FLAT&quot;).description(&quot;50 points per recycled battery pack&quot;).active(true).build(),</span>
+<span class="nc" id="L39">                EcoPointRule.builder().categoryName(&quot;Plastic E-Waste&quot;).pointsPerUnit(10).ruleType(&quot;PER_KG&quot;).description(&quot;10 points per Kg of plastic body scrap&quot;).active(true).build(),</span>
+<span class="nc" id="L40">                EcoPointRule.builder().categoryName(&quot;Scrap Metals&quot;).pointsPerUnit(20).ruleType(&quot;PER_KG&quot;).description(&quot;20 points per Kg of metal e-waste scrap&quot;).active(true).build(),</span>
+<span class="nc" id="L41">                EcoPointRule.builder().categoryName(&quot;Home Appliances&quot;).pointsPerUnit(150).ruleType(&quot;FLAT&quot;).description(&quot;150 points per appliance&quot;).active(true).build()</span>
+        );
+
+<span class="nc" id="L44">        ruleRepository.saveAll(rules);</span>
+<span class="nc" id="L45">        log.info(&quot;Seeded {} EcoPoint rules successfully.&quot;, rules.size());</span>
+<span class="nc" id="L46">    }</span>
+
+    private void seedRewards() {
+<span class="nc bnc" id="L49" title="All 2 branches missed.">        if (rewardRepository.count() &gt; 0) {</span>
+<span class="nc" id="L50">            return;</span>
+        }
+
+<span class="nc" id="L53">        log.info(&quot;Seeding default Citizen Rewards catalog...&quot;);</span>
+<span class="nc" id="L54">        List&lt;Reward&gt; rewards = List.of(</span>
+<span class="nc" id="L55">                Reward.builder()</span>
+<span class="nc" id="L56">                        .title(&quot;Organic Cotton Eco Tote Bag&quot;)</span>
+<span class="nc" id="L57">                        .description(&quot;Durable 100% organic cotton reusable tote bag for sustainable daily shopping.&quot;)</span>
+<span class="nc" id="L58">                        .category(RewardCategory.ECO_PRODUCT)</span>
+<span class="nc" id="L59">                        .pointsRequired(150)</span>
+<span class="nc" id="L60">                        .stockQuantity(50)</span>
+<span class="nc" id="L61">                        .imageUrl(&quot;https://images.unsplash.com/photo-1544816155-12df9643f363?w=500&amp;auto=format&amp;fit=crop&amp;q=80&quot;)</span>
+<span class="nc" id="L62">                        .active(true)</span>
+<span class="nc" id="L63">                        .build(),</span>
+<span class="nc" id="L64">                Reward.builder()</span>
+<span class="nc" id="L65">                        .title(&quot;Stainless Steel Insulated Eco Bottle&quot;)</span>
+<span class="nc" id="L66">                        .description(&quot;750ml thermal double-wall leakproof water bottle keeping drinks hot/cold for 24 hours.&quot;)</span>
+<span class="nc" id="L67">                        .category(RewardCategory.ECO_PRODUCT)</span>
+<span class="nc" id="L68">                        .pointsRequired(250)</span>
+<span class="nc" id="L69">                        .stockQuantity(30)</span>
+<span class="nc" id="L70">                        .imageUrl(&quot;https://images.unsplash.com/photo-1602143407151-7111542de6e8?w=500&amp;auto=format&amp;fit=crop&amp;q=80&quot;)</span>
+<span class="nc" id="L71">                        .active(true)</span>
+<span class="nc" id="L72">                        .build(),</span>
+<span class="nc" id="L73">                Reward.builder()</span>
+<span class="nc" id="L74">                        .title(&quot;Plant 1 Native Forest Tree&quot;)</span>
+<span class="nc" id="L75">                        .description(&quot;Fund the planting of 1 native tree in your name with GPS location &amp; green certificate.&quot;)</span>
+<span class="nc" id="L76">                        .category(RewardCategory.TREE_PLANTATION)</span>
+<span class="nc" id="L77">                        .pointsRequired(50)</span>
+<span class="nc" id="L78">                        .stockQuantity(500)</span>
+<span class="nc" id="L79">                        .imageUrl(&quot;https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?w=500&amp;auto=format&amp;fit=crop&amp;q=80&quot;)</span>
+<span class="nc" id="L80">                        .active(true)</span>
+<span class="nc" id="L81">                        .build(),</span>
+<span class="nc" id="L82">                Reward.builder()</span>
+<span class="nc" id="L83">                        .title(&quot;Solar-Powered Rechargeable LED Light&quot;)</span>
+<span class="nc" id="L84">                        .description(&quot;Eco-friendly solar garden/emergency LED light with dual solar panel charging.&quot;)</span>
+<span class="nc" id="L85">                        .category(RewardCategory.ECO_PRODUCT)</span>
+<span class="nc" id="L86">                        .pointsRequired(300)</span>
+<span class="nc" id="L87">                        .stockQuantity(20)</span>
+<span class="nc" id="L88">                        .imageUrl(&quot;https://images.unsplash.com/photo-1507473885765-e6ed057f782c?w=500&amp;auto=format&amp;fit=crop&amp;q=80&quot;)</span>
+<span class="nc" id="L89">                        .active(true)</span>
+<span class="nc" id="L90">                        .build(),</span>
+<span class="nc" id="L91">                Reward.builder()</span>
+<span class="nc" id="L92">                        .title(&quot;₹100 Amazon / Flipkart Eco Voucher&quot;)</span>
+<span class="nc" id="L93">                        .description(&quot;Digital shopping voucher redeemable instantly across major e-commerce platforms.&quot;)</span>
+<span class="nc" id="L94">                        .category(RewardCategory.GIFT_CARD)</span>
+<span class="nc" id="L95">                        .pointsRequired(100)</span>
+<span class="nc" id="L96">                        .stockQuantity(100)</span>
+<span class="nc" id="L97">                        .imageUrl(&quot;https://images.unsplash.com/photo-1556742049-0a67daf64f22?w=500&amp;auto=format&amp;fit=crop&amp;q=80&quot;)</span>
+<span class="nc" id="L98">                        .active(true)</span>
+<span class="nc" id="L99">                        .build(),</span>
+<span class="nc" id="L100">                Reward.builder()</span>
+<span class="nc" id="L101">                        .title(&quot;Green Citizen Recycling Certificate&quot;)</span>
+<span class="nc" id="L102">                        .description(&quot;Official verifiable PDF eco-warrior certificate signed by EcoTrack CDAC Board.&quot;)</span>
+<span class="nc" id="L103">                        .category(RewardCategory.CERTIFICATE)</span>
+<span class="nc" id="L104">                        .pointsRequired(20)</span>
+<span class="nc" id="L105">                        .stockQuantity(1000)</span>
+<span class="nc" id="L106">                        .imageUrl(&quot;https://images.unsplash.com/photo-1589829545856-d10d557cf95f?w=500&amp;auto=format&amp;fit=crop&amp;q=80&quot;)</span>
+<span class="nc" id="L107">                        .active(true)</span>
+<span class="nc" id="L108">                        .build()</span>
+        );
+
+<span class="nc" id="L111">        rewardRepository.saveAll(rewards);</span>
+<span class="nc" id="L112">        log.info(&quot;Seeded {} default rewards items.&quot;, rewards.size());</span>
+<span class="nc" id="L113">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

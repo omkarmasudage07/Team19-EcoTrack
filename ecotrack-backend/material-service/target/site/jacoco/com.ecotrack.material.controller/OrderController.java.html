@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>OrderController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">material-service</a> &gt; <a href="index.source.html" class="el_package">com.ecotrack.material.controller</a> &gt; <span class="el_source">OrderController.java</span></div><h1>OrderController.java</h1><pre class="source lang-java linenums">package com.ecotrack.material.controller;
+
+import com.ecotrack.material.dto.request.MockPaymentRequest;
+import com.ecotrack.material.dto.request.PlaceOrderRequest;
+import com.ecotrack.material.dto.request.RazorpayVerifyRequest;
+import com.ecotrack.material.dto.request.UpdateOrderStatusRequest;
+import com.ecotrack.material.dto.response.ApiResponse;
+import com.ecotrack.material.dto.response.OrderResponse;
+import com.ecotrack.material.dto.response.RazorpayOrderResponse;
+import com.ecotrack.material.enums.OrderStatus;
+import com.ecotrack.material.security.AuthenticatedUser;
+import com.ecotrack.material.service.OrderService;
+import com.ecotrack.material.service.PaymentService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.*;
+
+@RestController
+@RequestMapping(&quot;/api/v1/orders&quot;)
+@RequiredArgsConstructor
+@Tag(name = &quot;Orders&quot;, description = &quot;Industry purchase orders, mock payment, and Recycler fulfillment&quot;)
+public class OrderController {
+
+    private final OrderService orderService;
+    private final PaymentService paymentService;
+
+    @Operation(summary = &quot;[Industry] Place a new order&quot;)
+    @PreAuthorize(&quot;hasRole('INDUSTRY')&quot;)
+    @PostMapping
+    public ResponseEntity&lt;ApiResponse&lt;OrderResponse&gt;&gt; placeOrder(
+            @AuthenticationPrincipal AuthenticatedUser user, @Valid @RequestBody PlaceOrderRequest request) {
+<span class="nc" id="L40">        OrderResponse response = orderService.placeOrder(user.getUserId(), request);</span>
+<span class="nc" id="L41">        return ResponseEntity.status(HttpStatus.CREATED)</span>
+<span class="nc" id="L42">                .body(ApiResponse.success(HttpStatus.CREATED.value(), &quot;Order placed successfully&quot;, response));</span>
+    }
+
+    @Operation(summary = &quot;[Industry] Complete mock payment for an order&quot;)
+    @PreAuthorize(&quot;hasRole('INDUSTRY')&quot;)
+    @PostMapping(&quot;/{id}/pay&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;OrderResponse&gt;&gt; pay(
+            @AuthenticationPrincipal AuthenticatedUser user,
+            @PathVariable Long id,
+            @Valid @RequestBody MockPaymentRequest request) {
+<span class="nc" id="L52">        OrderResponse response = paymentService.processPayment(id, user.getUserId(), request);</span>
+<span class="nc" id="L53">        return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK.value(), &quot;Payment successful&quot;, response));</span>
+    }
+
+    @Operation(summary = &quot;[Industry] Create a Razorpay order - step 1 of Razorpay Test Mode checkout&quot;)
+    @PreAuthorize(&quot;hasRole('INDUSTRY')&quot;)
+    @PostMapping(&quot;/{id}/razorpay/create&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;RazorpayOrderResponse&gt;&gt; createRazorpayOrder(
+            @AuthenticationPrincipal AuthenticatedUser user, @PathVariable Long id) {
+<span class="nc" id="L61">        RazorpayOrderResponse response = paymentService.createRazorpayOrder(id, user.getUserId());</span>
+<span class="nc" id="L62">        return ResponseEntity.status(HttpStatus.CREATED)</span>
+<span class="nc" id="L63">                .body(ApiResponse.success(HttpStatus.CREATED.value(), &quot;Razorpay order created&quot;, response));</span>
+    }
+
+    @Operation(summary = &quot;[Industry] Verify a Razorpay payment - step 2, called after the checkout widget succeeds&quot;)
+    @PreAuthorize(&quot;hasRole('INDUSTRY')&quot;)
+    @PostMapping(&quot;/{id}/razorpay/verify&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;OrderResponse&gt;&gt; verifyRazorpayPayment(
+            @AuthenticationPrincipal AuthenticatedUser user,
+            @PathVariable Long id,
+            @Valid @RequestBody RazorpayVerifyRequest request) {
+<span class="nc" id="L73">        OrderResponse response = paymentService.verifyRazorpayPayment(id, user.getUserId(), request);</span>
+<span class="nc" id="L74">        return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK.value(), &quot;Payment verified successfully&quot;, response));</span>
+    }
+
+    @Operation(summary = &quot;[Industry] Cancel my order - only allowed before it ships&quot;)
+    @PreAuthorize(&quot;hasRole('INDUSTRY')&quot;)
+    @PatchMapping(&quot;/{id}/cancel&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;OrderResponse&gt;&gt; cancel(
+            @AuthenticationPrincipal AuthenticatedUser user, @PathVariable Long id) {
+<span class="nc" id="L82">        OrderResponse response = orderService.cancelOrder(id, user.getUserId());</span>
+<span class="nc" id="L83">        return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK.value(), &quot;Order cancelled&quot;, response));</span>
+    }
+
+    @Operation(summary = &quot;[Industry] View my own orders, optionally filtered by status&quot;)
+    @PreAuthorize(&quot;hasRole('INDUSTRY')&quot;)
+    @GetMapping(&quot;/my&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;Page&lt;OrderResponse&gt;&gt;&gt; getMyOrders(
+            @AuthenticationPrincipal AuthenticatedUser user,
+            @RequestParam(required = false) OrderStatus status,
+            Pageable pageable) {
+<span class="nc" id="L93">        Page&lt;OrderResponse&gt; response = orderService.getIndustryOrders(user.getUserId(), status, pageable);</span>
+<span class="nc" id="L94">        return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK.value(), &quot;Orders fetched&quot;, response));</span>
+    }
+
+    @Operation(summary = &quot;[Recycler] View orders placed against my materials, optionally filtered by status&quot;)
+    @PreAuthorize(&quot;hasRole('RECYCLER')&quot;)
+    @GetMapping(&quot;/received&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;Page&lt;OrderResponse&gt;&gt;&gt; getReceivedOrders(
+            @AuthenticationPrincipal AuthenticatedUser user,
+            @RequestParam(required = false) OrderStatus status,
+            Pageable pageable) {
+<span class="nc" id="L104">        Page&lt;OrderResponse&gt; response = orderService.getRecyclerOrders(user.getUserId(), status, pageable);</span>
+<span class="nc" id="L105">        return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK.value(), &quot;Orders fetched&quot;, response));</span>
+    }
+
+    @Operation(summary = &quot;[Recycler] Move a paid order forward: PROCESSING -&gt; SHIPPED -&gt; DELIVERED&quot;)
+    @PreAuthorize(&quot;hasRole('RECYCLER')&quot;)
+    @PatchMapping(&quot;/{id}/status&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;OrderResponse&gt;&gt; updateStatus(
+            @AuthenticationPrincipal AuthenticatedUser user,
+            @PathVariable Long id,
+            @Valid @RequestBody UpdateOrderStatusRequest request) {
+<span class="nc" id="L115">        OrderResponse response = orderService.updateOrderStatus(id, user.getUserId(), request);</span>
+<span class="nc" id="L116">        return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK.value(), &quot;Order status updated&quot;, response));</span>
+    }
+
+    @Operation(summary = &quot;View full details of a single order&quot;)
+    @GetMapping(&quot;/{id}&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;OrderResponse&gt;&gt; getDetail(
+            @AuthenticationPrincipal AuthenticatedUser user, @PathVariable Long id) {
+<span class="nc" id="L123">        OrderResponse response = orderService.getOrderDetail(id);</span>
+
+<span class="nc bnc" id="L125" title="All 4 branches missed.">        boolean isBuyer = &quot;INDUSTRY&quot;.equals(user.getRole()) &amp;&amp; response.getIndustryId().equals(user.getUserId());</span>
+<span class="nc bnc" id="L126" title="All 4 branches missed.">        boolean isSeller = &quot;RECYCLER&quot;.equals(user.getRole()) &amp;&amp; response.getRecyclerId().equals(user.getUserId());</span>
+<span class="nc" id="L127">        boolean isAdmin = &quot;ADMIN&quot;.equals(user.getRole());</span>
+
+<span class="nc bnc" id="L129" title="All 6 branches missed.">        if (!isBuyer &amp;&amp; !isSeller &amp;&amp; !isAdmin) {</span>
+<span class="nc" id="L130">            return ResponseEntity.status(HttpStatus.FORBIDDEN)</span>
+<span class="nc" id="L131">                    .body(ApiResponse.error(HttpStatus.FORBIDDEN.value(), &quot;You do not have access to this order&quot;, null));</span>
+        }
+
+<span class="nc" id="L134">        return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK.value(), &quot;Order fetched&quot;, response));</span>
+    }
+
+    @Operation(summary = &quot;[Admin] View every order in the system, optionally filtered by status&quot;)
+    @PreAuthorize(&quot;hasRole('ADMIN')&quot;)
+    @GetMapping
+    public ResponseEntity&lt;ApiResponse&lt;Page&lt;OrderResponse&gt;&gt;&gt; getAllOrders(
+            @RequestParam(required = false) OrderStatus status, Pageable pageable) {
+<span class="nc" id="L142">        Page&lt;OrderResponse&gt; response = orderService.getAllOrders(status, pageable);</span>
+<span class="nc" id="L143">        return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK.value(), &quot;Orders fetched&quot;, response));</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

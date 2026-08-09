@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>MaterialEventProducer.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">material-service</a> &gt; <a href="index.source.html" class="el_package">com.ecotrack.material.producer</a> &gt; <span class="el_source">MaterialEventProducer.java</span></div><h1>MaterialEventProducer.java</h1><pre class="source lang-java linenums">package com.ecotrack.material.producer;
+
+import com.ecotrack.material.constant.RabbitMQConstants;
+import com.ecotrack.material.entity.Order;
+import com.ecotrack.material.event.OrderEvent;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.stereotype.Component;
+
+import java.time.LocalDateTime;
+
+@Component
+@RequiredArgsConstructor
+<span class="nc" id="L15">@Slf4j</span>
+public class MaterialEventProducer {
+
+    private final RabbitTemplate rabbitTemplate;
+
+    public void publishOrderPlaced(Order order) {
+<span class="nc" id="L21">        publish(RabbitMQConstants.ROUTING_KEY_ORDER_PLACED, order);</span>
+<span class="nc" id="L22">    }</span>
+
+    public void publishPaymentSuccessful(Order order) {
+<span class="nc" id="L25">        publish(RabbitMQConstants.ROUTING_KEY_PAYMENT_SUCCESSFUL, order);</span>
+<span class="nc" id="L26">    }</span>
+
+    public void publishOrderShipped(Order order) {
+<span class="nc" id="L29">        publish(RabbitMQConstants.ROUTING_KEY_ORDER_SHIPPED, order);</span>
+<span class="nc" id="L30">    }</span>
+
+    public void publishOrderDelivered(Order order) {
+<span class="nc" id="L33">        publish(RabbitMQConstants.ROUTING_KEY_ORDER_DELIVERED, order);</span>
+<span class="nc" id="L34">    }</span>
+
+    private void publish(String routingKey, Order order) {
+<span class="nc" id="L37">        OrderEvent event = OrderEvent.builder()</span>
+<span class="nc" id="L38">                .orderId(order.getId())</span>
+<span class="nc" id="L39">                .orderNumber(order.getOrderNumber())</span>
+<span class="nc" id="L40">                .industryId(order.getIndustryId())</span>
+<span class="nc" id="L41">                .recyclerId(order.getRecyclerId())</span>
+<span class="nc" id="L42">                .status(order.getOrderStatus().name())</span>
+<span class="nc" id="L43">                .totalAmount(order.getTotalAmount())</span>
+<span class="nc" id="L44">                .occurredAt(LocalDateTime.now())</span>
+<span class="nc" id="L45">                .build();</span>
+
+        try {
+<span class="nc" id="L48">            rabbitTemplate.convertAndSend(RabbitMQConstants.EXCHANGE_NAME, routingKey, event);</span>
+<span class="nc" id="L49">            log.info(&quot;Published event [{}] for order {}&quot;, routingKey, order.getOrderNumber());</span>
+<span class="nc" id="L50">        } catch (Exception ex) {</span>
+<span class="nc" id="L51">            log.error(&quot;Failed to publish event [{}] for order {}: {}&quot;, routingKey, order.getOrderNumber(), ex.getMessage());</span>
+        }
+<span class="nc" id="L53">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>MaterialCategorySeeder.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">material-service</a> &gt; <a href="index.source.html" class="el_package">com.ecotrack.material.config</a> &gt; <span class="el_source">MaterialCategorySeeder.java</span></div><h1>MaterialCategorySeeder.java</h1><pre class="source lang-java linenums">package com.ecotrack.material.config;
+
+import com.ecotrack.material.entity.MaterialCategory;
+import com.ecotrack.material.repository.MaterialCategoryRepository;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.CommandLineRunner;
+import org.springframework.stereotype.Component;
+
+import java.util.List;
+
+@Component
+@RequiredArgsConstructor
+<span class="nc" id="L14">@Slf4j</span>
+public class MaterialCategorySeeder implements CommandLineRunner {
+
+    private final MaterialCategoryRepository categoryRepository;
+
+<span class="nc" id="L19">    private static final List&lt;MaterialCategory&gt; DEFAULT_CATEGORIES = List.of(</span>
+<span class="nc" id="L20">            MaterialCategory.builder().name(&quot;Copper&quot;).description(&quot;Recovered copper wiring and components&quot;).active(true).build(),</span>
+<span class="nc" id="L21">            MaterialCategory.builder().name(&quot;Aluminium&quot;).description(&quot;Recovered aluminium casings and parts&quot;).active(true).build(),</span>
+<span class="nc" id="L22">            MaterialCategory.builder().name(&quot;Plastic&quot;).description(&quot;Recovered plastic housings and components&quot;).active(true).build(),</span>
+<span class="nc" id="L23">            MaterialCategory.builder().name(&quot;Lithium&quot;).description(&quot;Recovered lithium from batteries&quot;).active(true).build(),</span>
+<span class="nc" id="L24">            MaterialCategory.builder().name(&quot;Iron&quot;).description(&quot;Recovered ferrous scrap&quot;).active(true).build(),</span>
+<span class="nc" id="L25">            MaterialCategory.builder().name(&quot;Gold&quot;).description(&quot;Recovered gold from connectors and PCBs&quot;).active(true).build(),</span>
+<span class="nc" id="L26">            MaterialCategory.builder().name(&quot;Silver&quot;).description(&quot;Recovered silver from contacts and PCBs&quot;).active(true).build(),</span>
+<span class="nc" id="L27">            MaterialCategory.builder().name(&quot;PCB Boards&quot;).description(&quot;Whole or shredded printed circuit boards&quot;).active(true).build(),</span>
+<span class="nc" id="L28">            MaterialCategory.builder().name(&quot;Battery Cells&quot;).description(&quot;Sorted, discharged battery cells&quot;).active(true).build()</span>
+<span class="nc" id="L29">    );</span>
+
+    @Override
+    public void run(String... args) {
+<span class="nc bnc" id="L33" title="All 2 branches missed.">        if (categoryRepository.count() == 0) {</span>
+<span class="nc" id="L34">            categoryRepository.saveAll(DEFAULT_CATEGORIES);</span>
+<span class="nc" id="L35">            log.info(&quot;Seeded {} default material categories&quot;, DEFAULT_CATEGORIES.size());</span>
+        }
+
+        // NOTE: sample marketplace materials are intentionally NOT seeded here.
+        // Every Material must belong to a real, approved Recycler (recyclerId
+        // references an actual users.id in auth_db). At application startup
+        // no Recycler account is guaranteed to exist yet, so seeding a
+        // material with a guessed id (e.g. 1L) creates an &quot;orphaned&quot; listing
+        // that no real Recycler can see under &quot;My Materials&quot; and that no
+        // real Recycler can fulfill if an Industry orders it. Once at least
+        // one Recycler Partner is approved through the normal application
+        // workflow, they can list real materials themselves.
+<span class="nc" id="L47">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>
