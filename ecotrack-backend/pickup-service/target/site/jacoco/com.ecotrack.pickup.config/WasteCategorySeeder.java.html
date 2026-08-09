@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>WasteCategorySeeder.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">pickup-service</a> &gt; <a href="index.source.html" class="el_package">com.ecotrack.pickup.config</a> &gt; <span class="el_source">WasteCategorySeeder.java</span></div><h1>WasteCategorySeeder.java</h1><pre class="source lang-java linenums">package com.ecotrack.pickup.config;
+
+import com.ecotrack.pickup.entity.WasteCategory;
+import com.ecotrack.pickup.repository.WasteCategoryRepository;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.CommandLineRunner;
+import org.springframework.stereotype.Component;
+
+import java.util.List;
+
+/**
+ * Pre-populates the common e-waste categories so the app is usable the
+ * moment it starts, instead of forcing the Admin to create every category
+ * by hand before a single pickup can be scheduled. Runs once - if
+ * categories already exist, it does nothing.
+ */
+@Component
+@RequiredArgsConstructor
+<span class="nc" id="L20">@Slf4j</span>
+public class WasteCategorySeeder implements CommandLineRunner {
+
+    private final WasteCategoryRepository wasteCategoryRepository;
+
+<span class="nc" id="L25">    private static final List&lt;WasteCategory&gt; DEFAULT_CATEGORIES = List.of(</span>
+<span class="nc" id="L26">            WasteCategory.builder().name(&quot;Mobile Phones&quot;).description(&quot;Smartphones and feature phones&quot;).active(true).build(),</span>
+<span class="nc" id="L27">            WasteCategory.builder().name(&quot;Laptops &amp; Computers&quot;).description(&quot;Laptops, desktops, monitors, peripherals&quot;).active(true).build(),</span>
+<span class="nc" id="L28">            WasteCategory.builder().name(&quot;Batteries&quot;).description(&quot;Li-ion, lead-acid and other battery cells&quot;).active(true).build(),</span>
+<span class="nc" id="L29">            WasteCategory.builder().name(&quot;PCB Boards&quot;).description(&quot;Printed circuit boards from any device&quot;).active(true).build(),</span>
+<span class="nc" id="L30">            WasteCategory.builder().name(&quot;Home Appliances&quot;).description(&quot;Small appliances - mixers, irons, kettles&quot;).active(true).build(),</span>
+<span class="nc" id="L31">            WasteCategory.builder().name(&quot;Large Appliances&quot;).description(&quot;Refrigerators, washing machines, ACs&quot;).active(true).build(),</span>
+<span class="nc" id="L32">            WasteCategory.builder().name(&quot;Cables &amp; Wires&quot;).description(&quot;Copper wiring, chargers, cables&quot;).active(true).build(),</span>
+<span class="nc" id="L33">            WasteCategory.builder().name(&quot;Other Electronics&quot;).description(&quot;Any other electronic waste not listed above&quot;).active(true).build()</span>
+<span class="nc" id="L34">    );</span>
+
+    @Override
+    public void run(String... args) {
+<span class="nc bnc" id="L38" title="All 2 branches missed.">        if (wasteCategoryRepository.count() &gt; 0) {</span>
+<span class="nc" id="L39">            log.info(&quot;Waste categories already seeded, skipping&quot;);</span>
+<span class="nc" id="L40">            return;</span>
+        }
+<span class="nc" id="L42">        wasteCategoryRepository.saveAll(DEFAULT_CATEGORIES);</span>
+<span class="nc" id="L43">        log.info(&quot;Seeded {} default waste categories&quot;, DEFAULT_CATEGORIES.size());</span>
+<span class="nc" id="L44">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

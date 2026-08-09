@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>PickupSeeder.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">pickup-service</a> &gt; <a href="index.source.html" class="el_package">com.ecotrack.pickup.config</a> &gt; <span class="el_source">PickupSeeder.java</span></div><h1>PickupSeeder.java</h1><pre class="source lang-java linenums">package com.ecotrack.pickup.config;
+
+import com.ecotrack.pickup.entity.Pickup;
+import com.ecotrack.pickup.entity.WasteCategory;
+import com.ecotrack.pickup.enums.PickupStatus;
+import com.ecotrack.pickup.repository.PickupRepository;
+import com.ecotrack.pickup.repository.WasteCategoryRepository;
+import com.ecotrack.pickup.util.PickupNumberGenerator;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.CommandLineRunner;
+import org.springframework.stereotype.Component;
+
+import java.time.LocalDate;
+import java.util.List;
+
+@Component
+@RequiredArgsConstructor
+<span class="nc" id="L19">@Slf4j</span>
+public class PickupSeeder implements CommandLineRunner {
+
+    private final PickupRepository pickupRepository;
+    private final WasteCategoryRepository wasteCategoryRepository;
+
+    @Override
+    public void run(String... args) {
+<span class="nc bnc" id="L27" title="All 2 branches missed.">        if (pickupRepository.count() &gt; 0) {</span>
+<span class="nc" id="L28">            return;</span>
+        }
+
+<span class="nc" id="L31">        log.info(&quot;Seeding demo pickups across all 6 regions...&quot;);</span>
+<span class="nc" id="L32">        List&lt;WasteCategory&gt; categories = wasteCategoryRepository.findAll();</span>
+<span class="nc bnc" id="L33" title="All 2 branches missed.">        WasteCategory defaultCat = !categories.isEmpty() ? categories.get(0) : null;</span>
+
+<span class="nc" id="L35">        List&lt;Pickup&gt; demoPickups = List.of(</span>
+<span class="nc" id="L36">                Pickup.builder()</span>
+<span class="nc" id="L37">                        .pickupNumber(PickupNumberGenerator.generate())</span>
+<span class="nc" id="L38">                        .citizenId(1L)</span>
+<span class="nc" id="L39">                        .pickupAddress(&quot;FC Road, Deccan Gymkhana, Pune&quot;)</span>
+<span class="nc" id="L40">                        .pickupCity(&quot;Pune&quot;)</span>
+<span class="nc" id="L41">                        .pickupPincode(&quot;411004&quot;)</span>
+<span class="nc" id="L42">                        .regionName(&quot;Pune Region&quot;)</span>
+<span class="nc" id="L43">                        .latitude(18.5204)</span>
+<span class="nc" id="L44">                        .longitude(73.8567)</span>
+<span class="nc" id="L45">                        .pickupDate(LocalDate.now().plusDays(1))</span>
+<span class="nc" id="L46">                        .pickupTimeSlot(&quot;10:00 AM - 01:00 PM&quot;)</span>
+<span class="nc" id="L47">                        .wasteCategory(defaultCat)</span>
+<span class="nc" id="L48">                        .notes(&quot;Old laptops and broken mobile chargers&quot;)</span>
+<span class="nc" id="L49">                        .status(PickupStatus.PENDING)</span>
+<span class="nc" id="L50">                        .build(),</span>
+<span class="nc" id="L51">                Pickup.builder()</span>
+<span class="nc" id="L52">                        .pickupNumber(PickupNumberGenerator.generate())</span>
+<span class="nc" id="L53">                        .citizenId(2L)</span>
+<span class="nc" id="L54">                        .pickupAddress(&quot;Marine Drive, Nariman Point, Mumbai&quot;)</span>
+<span class="nc" id="L55">                        .pickupCity(&quot;Mumbai&quot;)</span>
+<span class="nc" id="L56">                        .pickupPincode(&quot;400021&quot;)</span>
+<span class="nc" id="L57">                        .regionName(&quot;Mumbai Region&quot;)</span>
+<span class="nc" id="L58">                        .latitude(18.9438)</span>
+<span class="nc" id="L59">                        .longitude(72.8232)</span>
+<span class="nc" id="L60">                        .pickupDate(LocalDate.now().plusDays(2))</span>
+<span class="nc" id="L61">                        .pickupTimeSlot(&quot;02:00 PM - 05:00 PM&quot;)</span>
+<span class="nc" id="L62">                        .wasteCategory(defaultCat)</span>
+<span class="nc" id="L63">                        .notes(&quot;Scrap printer and desktop CRT monitors&quot;)</span>
+<span class="nc" id="L64">                        .status(PickupStatus.PENDING)</span>
+<span class="nc" id="L65">                        .build(),</span>
+<span class="nc" id="L66">                Pickup.builder()</span>
+<span class="nc" id="L67">                        .pickupNumber(PickupNumberGenerator.generate())</span>
+<span class="nc" id="L68">                        .citizenId(3L)</span>
+<span class="nc" id="L69">                        .pickupAddress(&quot;Tarabai Park, Kolhapur&quot;)</span>
+<span class="nc" id="L70">                        .pickupCity(&quot;Kolhapur&quot;)</span>
+<span class="nc" id="L71">                        .pickupPincode(&quot;416003&quot;)</span>
+<span class="nc" id="L72">                        .regionName(&quot;Kolhapur Region&quot;)</span>
+<span class="nc" id="L73">                        .latitude(16.7050)</span>
+<span class="nc" id="L74">                        .longitude(74.2433)</span>
+<span class="nc" id="L75">                        .pickupDate(LocalDate.now().plusDays(1))</span>
+<span class="nc" id="L76">                        .pickupTimeSlot(&quot;09:00 AM - 12:00 PM&quot;)</span>
+<span class="nc" id="L77">                        .wasteCategory(defaultCat)</span>
+<span class="nc" id="L78">                        .notes(&quot;Battery packs and electronic toys&quot;)</span>
+<span class="nc" id="L79">                        .status(PickupStatus.PENDING)</span>
+<span class="nc" id="L80">                        .build(),</span>
+<span class="nc" id="L81">                Pickup.builder()</span>
+<span class="nc" id="L82">                        .pickupNumber(PickupNumberGenerator.generate())</span>
+<span class="nc" id="L83">                        .citizenId(4L)</span>
+<span class="nc" id="L84">                        .pickupAddress(&quot;Dharampeth, Nagpur&quot;)</span>
+<span class="nc" id="L85">                        .pickupCity(&quot;Nagpur&quot;)</span>
+<span class="nc" id="L86">                        .pickupPincode(&quot;440010&quot;)</span>
+<span class="nc" id="L87">                        .regionName(&quot;Nagpur Region&quot;)</span>
+<span class="nc" id="L88">                        .latitude(21.1458)</span>
+<span class="nc" id="L89">                        .longitude(79.0882)</span>
+<span class="nc" id="L90">                        .pickupDate(LocalDate.now().plusDays(3))</span>
+<span class="nc" id="L91">                        .pickupTimeSlot(&quot;11:00 AM - 02:00 PM&quot;)</span>
+<span class="nc" id="L92">                        .wasteCategory(defaultCat)</span>
+<span class="nc" id="L93">                        .notes(&quot;Defective kitchen electronic appliances&quot;)</span>
+<span class="nc" id="L94">                        .status(PickupStatus.PENDING)</span>
+<span class="nc" id="L95">                        .build(),</span>
+<span class="nc" id="L96">                Pickup.builder()</span>
+<span class="nc" id="L97">                        .pickupNumber(PickupNumberGenerator.generate())</span>
+<span class="nc" id="L98">                        .citizenId(5L)</span>
+<span class="nc" id="L99">                        .pickupAddress(&quot;College Road, Nashik&quot;)</span>
+<span class="nc" id="L100">                        .pickupCity(&quot;Nashik&quot;)</span>
+<span class="nc" id="L101">                        .pickupPincode(&quot;422005&quot;)</span>
+<span class="nc" id="L102">                        .regionName(&quot;Nashik Region&quot;)</span>
+<span class="nc" id="L103">                        .latitude(19.9975)</span>
+<span class="nc" id="L104">                        .longitude(73.7898)</span>
+<span class="nc" id="L105">                        .pickupDate(LocalDate.now().plusDays(2))</span>
+<span class="nc" id="L106">                        .pickupTimeSlot(&quot;10:00 AM - 01:00 PM&quot;)</span>
+<span class="nc" id="L107">                        .wasteCategory(defaultCat)</span>
+<span class="nc" id="L108">                        .notes(&quot;Old telecom modems and copper wiring&quot;)</span>
+<span class="nc" id="L109">                        .status(PickupStatus.PENDING)</span>
+<span class="nc" id="L110">                        .build(),</span>
+<span class="nc" id="L111">                Pickup.builder()</span>
+<span class="nc" id="L112">                        .pickupNumber(PickupNumberGenerator.generate())</span>
+<span class="nc" id="L113">                        .citizenId(6L)</span>
+<span class="nc" id="L114">                        .pickupAddress(&quot;Powai Naka, Satara&quot;)</span>
+<span class="nc" id="L115">                        .pickupCity(&quot;Satara&quot;)</span>
+<span class="nc" id="L116">                        .pickupPincode(&quot;415001&quot;)</span>
+<span class="nc" id="L117">                        .regionName(&quot;Satara Region&quot;)</span>
+<span class="nc" id="L118">                        .latitude(17.6805)</span>
+<span class="nc" id="L119">                        .longitude(74.0183)</span>
+<span class="nc" id="L120">                        .pickupDate(LocalDate.now().plusDays(1))</span>
+<span class="nc" id="L121">                        .pickupTimeSlot(&quot;03:00 PM - 06:00 PM&quot;)</span>
+<span class="nc" id="L122">                        .wasteCategory(defaultCat)</span>
+<span class="nc" id="L123">                        .notes(&quot;UPS batteries and solar scrap components&quot;)</span>
+<span class="nc" id="L124">                        .status(PickupStatus.PENDING)</span>
+<span class="nc" id="L125">                        .build()</span>
+        );
+
+<span class="nc" id="L128">        pickupRepository.saveAll(demoPickups);</span>
+<span class="nc" id="L129">        log.info(&quot;Seeded {} demo region pickups.&quot;, demoPickups.size());</span>
+<span class="nc" id="L130">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>
